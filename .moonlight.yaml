@@ -1,0 +1,33 @@
+sonar:
+  enabled: true
+  type: other
+
+build:
+  enabled: true
+
+deploy:
+  type: argocd
+
+steps:
+  - name: download-dep
+    image: 289208114389.dkr.ecr.us-east-1.amazonaws.com/golang:1.21.5-bullseye
+    commands:
+      - GOPRIVATE=github.com/PicPay go mod download
+  - name: lint
+    runAfter:
+      - download-dep
+    image: 289208114389.dkr.ecr.us-east-1.amazonaws.com/golangci/golangci-lint:v1.52.2
+    commands:
+      - golangci-lint run --out-format checkstyle > lint.out
+  - name: unit-tests
+    runAfter:
+      - download-dep
+    image: 289208114389.dkr.ecr.us-east-1.amazonaws.com/golang:1.21.5-bullseye
+    commands:
+      - go test -short -coverprofile=cp.out ./...
+  - name: govulncheck
+    runAfter:
+      - download-dep
+    image: 289208114389.dkr.ecr.us-east-1.amazonaws.com/golang:1.21.5-bullseye
+    commands:
+      - go run golang.org/x/vuln/cmd/govulncheck@latest --test ./...

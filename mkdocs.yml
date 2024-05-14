@@ -1,0 +1,10 @@
+site_name: 'ms-chatpicpay-websocket-handler-api'
+nav:
+  - 'Visão Geral': index.md
+  - 'Recursos': pages/recursos.md
+  - 'Dependências': pages/dependencias.md
+  - 'Começar': pages/comecar.md
+  - 'Conteúdo Relacionado': pages/relacionado.md
+  - 'Contato': pages/contato.md
+plugins:
+  - techdocs-core

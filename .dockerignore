@@ -1,0 +1,8 @@
+go.work
+go.work.sum
+.git
+**/.*
+*.yml
+*.yaml
+*.md
+docs
