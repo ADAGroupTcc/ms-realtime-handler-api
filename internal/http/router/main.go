@@ -23,14 +23,15 @@ func Handlers(ctx context.Context, dependencies *HandlersDependencies) *gin.Engi
 	jsonFormatter := &logs.JSONFormatter{}
 	gi.Use(middlewares.EnhanceLogger(jsonFormatter))
 	logger := logs.New(jsonFormatter)
-	gi.Use(middlewares.Authenticate(dependencies.SessionClienter, logger))
 
-	websocketHandler := websocket.NewHandler(dependencies.PubSubBroker, dependencies.Instrument, logger)
-
-	gi.GET("/ws", websocketHandler.WebsocketServer)
 	gi.GET("/health", func(c *gin.Context) {
 		c.JSON(200, gin.H{"status": "ok"})
 	})
+
+	websocketHandler := websocket.NewHandler(dependencies.PubSubBroker, dependencies.Instrument, logger)
+	gi.Use(middlewares.Authenticate(dependencies.SessionClienter, logger))
+
+	gi.GET("/ws", websocketHandler.WebsocketServer)
 
 	return gi
 }
