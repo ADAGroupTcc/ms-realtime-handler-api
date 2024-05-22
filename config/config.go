@@ -15,9 +15,16 @@ type Environments struct {
 	InstrumentationService             string `envconfig:"INSTRUMENTATION_SERVICE"`
 	InstrumentationTracesEndpoint      string `envconfig:"INSTRUMENTATION_TRACES_ENDPOINT"`
 	InstrumentationMetricsEndpoint     string `envconfig:"INSTRUMENTATION_METRICS_ENDPOINT"`
-	InstrumentationSendMetricsInterval int    `envconfig:"INSTRUMENTATION_SEND_METRICS_INTERVAL"`
+	InstrumentationSendMetricsInterval string `envconfig:"INSTRUMENTATION_SEND_METRICS_INTERVAL"`
 	RedisHost                          string `envconfig:"REDIS_HOST"`
 	RedisPoolSize                      int    `envconfig:"REDIS_POOL_SIZE"`
+	SessionTokenAPIBaseURL             string `envconfig:"SESSION_TOKEN_API_BASE_URL"`
+	SessionTokenAPITimeoutMs           int    `envconfig:"SESSION_TOKEN_API_TIMEOUT_MS"`
+	SessionTokenAPIRetryCount          int    `envconfig:"SESSION_TOKEN_API_RETRY_COUNT"`
+	SessionTokenAPIRetryIntervalMs     int    `envconfig:"SESSION_TOKEN_API_RETRY_INTERVAL_MS"`
+	SessionTokenAPIRetryStatusCodes    []int  `envconfig:"SESSION_TOKEN_API_RETRY_STATUS_CODES"`
+	SessionTokenMaxIdleConns           int    `envconfig:"SESSION_TOKEN_MAX_IDLE_CONNS"`
+	SessionTokenMaxConnsPerHost        int    `envconfig:"SESSION_TOKEN_MAX_CONNS_PER_HOST"`
 }
 
 // LoadEnvVars load the environment variables
