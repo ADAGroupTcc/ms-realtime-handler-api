@@ -19,9 +19,12 @@ type HandlersDependencies struct {
 }
 
 func Handlers(ctx context.Context, dependencies *HandlersDependencies) *gin.Engine {
-	gi := gin.New()
 	jsonFormatter := &logs.JSONFormatter{}
+
+	gi := gin.New()
+	gi.Use(middlewares.SetRequestId())
 	gi.Use(middlewares.EnhanceLogger(jsonFormatter))
+
 	logger := logs.New(jsonFormatter)
 
 	gi.GET("/health", func(c *gin.Context) {
@@ -29,6 +32,7 @@ func Handlers(ctx context.Context, dependencies *HandlersDependencies) *gin.Engi
 	})
 
 	websocketHandler := websocket.NewHandler(dependencies.PubSubBroker, dependencies.Instrument, logger)
+
 	gi.Use(middlewares.Authenticate(dependencies.SessionClienter, logger))
 
 	gi.GET("/ws", websocketHandler.WebsocketServer)
