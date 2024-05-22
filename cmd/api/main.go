@@ -2,12 +2,15 @@ package main
 
 import (
 	"context"
-	"fmt"
-	"net/http"
+	"os"
+	"time"
 
+	api "github.com/PicPay/lib-go-api"
 	logger "github.com/PicPay/lib-go-logger/v2"
 	"github.com/PicPay/ms-chatpicpay-websocket-handler-api/config"
-	"github.com/PicPay/ms-chatpicpay-websocket-handler-api/internal/http/websocket"
+	"github.com/PicPay/ms-chatpicpay-websocket-handler-api/internal/clients"
+	"github.com/PicPay/ms-chatpicpay-websocket-handler-api/internal/http/router"
+	"github.com/PicPay/ms-chatpicpay-websocket-handler-api/pkg/http"
 	"github.com/PicPay/ms-chatpicpay-websocket-handler-api/pkg/instrumentation"
 	"github.com/PicPay/ms-chatpicpay-websocket-handler-api/pkg/pubsubconnector"
 	"github.com/PicPay/ms-chatpicpay-websocket-handler-api/pkg/pubsubconnector/redisconnector"
@@ -39,12 +42,36 @@ func main() {
 	subscriber := redisconnector.NewRedisSubscriber(redisConnectionconfig)
 	broker := pubsubconnector.NewPubSubBroker(publisher, subscriber)
 
-	handler := websocket.NewHandler(broker, instrument)
+	httpClient, err := http.New(http.Config{
+		BaseURL:         envs.SessionTokenAPIBaseURL,
+		Timeout:         time.Duration(time.Millisecond * time.Duration(envs.SessionTokenAPITimeoutMs)),
+		MaxIdleConns:    envs.SessionTokenMaxIdleConns,
+		MaxConnsPerHost: envs.SessionTokenMaxConnsPerHost,
+		RetryConfig: http.RetryConfig{
+			Retries:         envs.SessionTokenAPIRetryCount,
+			RetryAfter:      time.Duration(time.Duration(envs.SessionTokenAPIRetryIntervalMs) * time.Millisecond),
+			RetryWhenStatus: envs.SessionTokenAPIRetryStatusCodes,
+		},
+		Logger:     log,
+		Instrument: instrument,
+	})
 
-	http.HandleFunc("/ws", handler.WebsocketServer())
+	sessionClient := clients.NewSessionClient(httpClient, instrument)
 
-	log.Info(fmt.Sprintf("Server started on port %s", envs.APIPort))
-	err := http.ListenAndServe(":"+envs.APIPort, nil)
+	if err != nil {
+		log.Fatal("Failed to create http client", err)
+		os.Exit(1)
+	}
+
+	handlers := router.Handlers(ctx,
+		&router.HandlersDependencies{
+			PubSubBroker:    broker,
+			SessionClienter: sessionClient,
+			Instrument:      instrument,
+		},
+	)
+
+	err = api.Start(log, envs.APIPort, handlers)
 	if err != nil {
 		log.Fatal("Failed to start server", err)
 	}
