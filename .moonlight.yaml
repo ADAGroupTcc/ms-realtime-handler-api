@@ -1,5 +1,5 @@
 sonar:
-  enabled: true
+  enabled: false
   type: other
 
 build:
