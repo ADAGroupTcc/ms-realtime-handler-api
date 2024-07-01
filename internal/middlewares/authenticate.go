@@ -2,11 +2,11 @@ package middlewares
 
 import (
 	logger "github.com/PicPay/lib-go-logger/v2"
-	"github.com/PicPay/ms-chatpicpay-websocket-handler-api/internal/clients"
+	"github.com/PicPay/ms-chatpicpay-websocket-handler-api/internal/clients/sessionClient"
 	"github.com/gin-gonic/gin"
 )
 
-func Authenticate(sessionClient clients.SessionClienter, log *logger.Logger) gin.HandlerFunc {
+func Authenticate(sessionClient sessionClient.SessionClienter, log *logger.Logger) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		token := c.GetHeader("Token")
 		requestId := c.GetHeader("X-Request-Id")

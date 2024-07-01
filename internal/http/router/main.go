@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/PicPay/lib-go-instrumentation/interfaces"
-	"github.com/PicPay/ms-chatpicpay-websocket-handler-api/internal/clients"
+	"github.com/PicPay/ms-chatpicpay-websocket-handler-api/internal/clients/sessionClient"
 	"github.com/PicPay/ms-chatpicpay-websocket-handler-api/internal/http/websocket"
 	"github.com/PicPay/ms-chatpicpay-websocket-handler-api/internal/middlewares"
 	"github.com/PicPay/ms-chatpicpay-websocket-handler-api/internal/services"
@@ -15,7 +15,7 @@ import (
 type HandlersDependencies struct {
 	PublishService   services.PublishServicer
 	SubscribeService services.SubscribeServicer
-	SessionClienter  clients.SessionClienter
+	SessionClienter  sessionClient.SessionClienter
 	Instrument       interfaces.Instrument
 }
 

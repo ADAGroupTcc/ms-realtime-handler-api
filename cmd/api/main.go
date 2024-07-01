@@ -8,7 +8,7 @@ import (
 	api "github.com/PicPay/lib-go-api"
 	logger "github.com/PicPay/lib-go-logger/v2"
 	"github.com/PicPay/ms-chatpicpay-websocket-handler-api/config"
-	"github.com/PicPay/ms-chatpicpay-websocket-handler-api/internal/clients"
+	"github.com/PicPay/ms-chatpicpay-websocket-handler-api/internal/clients/sessionClient"
 	"github.com/PicPay/ms-chatpicpay-websocket-handler-api/internal/http/router"
 	"github.com/PicPay/ms-chatpicpay-websocket-handler-api/internal/services"
 	"github.com/PicPay/ms-chatpicpay-websocket-handler-api/pkg/http"
@@ -59,7 +59,7 @@ func main() {
 		Instrument: instrument,
 	})
 
-	sessionClient := clients.NewSessionClient(httpClient, instrument)
+	sessionClient := sessionClient.NewSessionClient(httpClient, instrument)
 
 	if err != nil {
 		log.Fatal("Failed to create http client", err)
