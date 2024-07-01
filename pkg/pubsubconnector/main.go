@@ -5,8 +5,8 @@ import (
 )
 
 type Event struct {
-	Type  string `json:"type"`
-	Event string `json:"event"`
+	EventName string      `json:"eventName"`
+	Event     interface{} `json:"event"`
 }
 
 type PubSubBroker struct {
@@ -15,11 +15,11 @@ type PubSubBroker struct {
 }
 
 type Publisher interface {
-	Publisher(ctx context.Context, channel string, message string) error
+	Publish(ctx context.Context, message interface{}, configMap *map[string]interface{}) error
 }
 
 type Subscriber interface {
-	Subscriber(ctx context.Context, channel string) (*Event, error)
+	SubscribeAsync(ctx context.Context, topic string, eventsChan chan []byte)
 }
 
 func NewPubSubBroker(Publisher Publisher, Subscriber Subscriber) *PubSubBroker {

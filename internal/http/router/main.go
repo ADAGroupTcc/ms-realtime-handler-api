@@ -7,15 +7,16 @@ import (
 	"github.com/PicPay/ms-chatpicpay-websocket-handler-api/internal/clients"
 	"github.com/PicPay/ms-chatpicpay-websocket-handler-api/internal/http/websocket"
 	"github.com/PicPay/ms-chatpicpay-websocket-handler-api/internal/middlewares"
+	"github.com/PicPay/ms-chatpicpay-websocket-handler-api/internal/services"
 	"github.com/PicPay/ms-chatpicpay-websocket-handler-api/pkg/logs"
-	"github.com/PicPay/ms-chatpicpay-websocket-handler-api/pkg/pubsubconnector"
 	"github.com/gin-gonic/gin"
 )
 
 type HandlersDependencies struct {
-	PubSubBroker    *pubsubconnector.PubSubBroker
-	SessionClienter clients.SessionClienter
-	Instrument      interfaces.Instrument
+	PublishService   services.PublishServicer
+	SubscribeService services.SubscribeServicer
+	SessionClienter  clients.SessionClienter
+	Instrument       interfaces.Instrument
 }
 
 func Handlers(ctx context.Context, dependencies *HandlersDependencies) *gin.Engine {
@@ -31,7 +32,7 @@ func Handlers(ctx context.Context, dependencies *HandlersDependencies) *gin.Engi
 		c.JSON(200, gin.H{"status": "ok"})
 	})
 
-	websocketHandler := websocket.NewHandler(dependencies.PubSubBroker, dependencies.Instrument, logger)
+	websocketHandler := websocket.NewHandler(dependencies.PublishService, dependencies.SubscribeService, dependencies.Instrument, logger)
 
 	gi.Use(middlewares.Authenticate(dependencies.SessionClienter, logger))
 

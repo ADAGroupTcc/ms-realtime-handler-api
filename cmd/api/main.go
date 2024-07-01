@@ -10,9 +10,11 @@ import (
 	"github.com/PicPay/ms-chatpicpay-websocket-handler-api/config"
 	"github.com/PicPay/ms-chatpicpay-websocket-handler-api/internal/clients"
 	"github.com/PicPay/ms-chatpicpay-websocket-handler-api/internal/http/router"
+	"github.com/PicPay/ms-chatpicpay-websocket-handler-api/internal/services"
 	"github.com/PicPay/ms-chatpicpay-websocket-handler-api/pkg/http"
 	"github.com/PicPay/ms-chatpicpay-websocket-handler-api/pkg/instrumentation"
 	"github.com/PicPay/ms-chatpicpay-websocket-handler-api/pkg/pubsubconnector"
+	"github.com/PicPay/ms-chatpicpay-websocket-handler-api/pkg/pubsubconnector/kafkaconnector"
 	"github.com/PicPay/ms-chatpicpay-websocket-handler-api/pkg/pubsubconnector/redisconnector"
 	_ "go.uber.org/automaxprocs"
 )
@@ -34,12 +36,13 @@ func main() {
 		MetricEndpoint: envs.InstrumentationMetricsEndpoint,
 	})
 
-	redisConnectionconfig := &redisconnector.RedisConnectionConfig{
-		Addr:     envs.RedisHost,
-		PoolSize: envs.RedisPoolSize,
-	}
-	publisher := redisconnector.NewRedisPublisher(redisConnectionconfig)
-	subscriber := redisconnector.NewRedisSubscriber(redisConnectionconfig)
+	redisConnectionconfig := redisconnector.NewConfig(
+		envs.RedisHost,
+		envs.RedisPoolSize,
+	)
+
+	publisher, _ := kafkaconnector.NewKafkaProducer(envs.KafkaBrokers, log, instrument)
+	subscriber := redisconnector.NewRedisSubscriber(redisConnectionconfig, log, instrument)
 	broker := pubsubconnector.NewPubSubBroker(publisher, subscriber)
 
 	httpClient, err := http.New(http.Config{
@@ -63,11 +66,15 @@ func main() {
 		os.Exit(1)
 	}
 
+	publishService := services.NewPublishEventService(broker, envs.KafkaPublisherTopic)
+	subscribeService := services.NewSubscribeEventService(broker, envs.RedisSubscribeTopic)
+
 	handlers := router.Handlers(ctx,
 		&router.HandlersDependencies{
-			PubSubBroker:    broker,
-			SessionClienter: sessionClient,
-			Instrument:      instrument,
+			PublishService:   publishService,
+			SubscribeService: subscribeService,
+			SessionClienter:  sessionClient,
+			Instrument:       instrument,
 		},
 	)
 

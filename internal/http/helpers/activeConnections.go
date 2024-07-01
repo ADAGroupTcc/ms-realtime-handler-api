@@ -22,6 +22,10 @@ func (activeConns *activeConnections) DeleteConn(id string) {
 	delete(activeConns.users, id)
 }
 
+func (activeConns *activeConnections) GetAllConns() map[string]*websocket.Conn {
+	return activeConns.users
+}
+
 func (activeConns *activeConnections) ConnectionSize() int {
 	return len(activeConns.users)
 }

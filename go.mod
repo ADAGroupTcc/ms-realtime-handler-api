@@ -12,6 +12,7 @@ require (
 	github.com/PicPay/lib-go-api v0.3.0
 	github.com/PicPay/lib-go-instrumentation v0.12.0
 	github.com/PicPay/lib-go-pperr v1.3.0
+	github.com/confluentinc/confluent-kafka-go v1.9.2
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/gorilla/websocket v1.5.1
 	github.com/joho/godotenv v1.5.1

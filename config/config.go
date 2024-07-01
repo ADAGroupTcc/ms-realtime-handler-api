@@ -18,6 +18,9 @@ type Environments struct {
 	InstrumentationSendMetricsInterval string `envconfig:"INSTRUMENTATION_SEND_METRICS_INTERVAL"`
 	RedisHost                          string `envconfig:"REDIS_HOST"`
 	RedisPoolSize                      int    `envconfig:"REDIS_POOL_SIZE"`
+	RedisSubscribeTopic                string `envconfig:"REDIS_SUBSCRIBER_TOPIC"`
+	KafkaBrokers                       string `envconfig:"KAFKA_BROKERS"`
+	KafkaPublisherTopic                string `envconfig:"KAFKA_PUBLISHER_TOPIC"`
 	SessionTokenAPIBaseURL             string `envconfig:"SESSION_TOKEN_API_BASE_URL"`
 	SessionTokenAPITimeoutMs           int    `envconfig:"SESSION_TOKEN_API_TIMEOUT_MS"`
 	SessionTokenAPIRetryCount          int    `envconfig:"SESSION_TOKEN_API_RETRY_COUNT"`
