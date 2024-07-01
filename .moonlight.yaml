@@ -10,7 +10,7 @@ deploy:
 
 steps:
   - name: download-dep
-    image: 289208114389.dkr.ecr.us-east-1.amazonaws.com/golang:1.22.3-bullseye
+    image: 289208114389.dkr.ecr.us-east-1.amazonaws.com/golang:1.22.4-bullseye
     commands:
       - GOPRIVATE=github.com/PicPay go mod download
   - name: lint
@@ -22,12 +22,12 @@ steps:
   - name: unit-tests
     runAfter:
       - download-dep
-    image: 289208114389.dkr.ecr.us-east-1.amazonaws.com/golang:1.22.3-bullseye
+    image: 289208114389.dkr.ecr.us-east-1.amazonaws.com/golang:1.22.4-bullseye
     commands:
       - go test -short -coverprofile=cp.out ./...
   - name: govulncheck
     runAfter:
       - download-dep
-    image: 289208114389.dkr.ecr.us-east-1.amazonaws.com/golang:1.22.3-bullseye
+    image: 289208114389.dkr.ecr.us-east-1.amazonaws.com/golang:1.22.4-bullseye
     commands:
       - go run golang.org/x/vuln/cmd/govulncheck@latest --test ./...

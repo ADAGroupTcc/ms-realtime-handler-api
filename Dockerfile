@@ -1,4 +1,4 @@
-FROM 289208114389.dkr.ecr.us-east-1.amazonaws.com/golang:1.22.3-alpine3.19 as build
+FROM 289208114389.dkr.ecr.us-east-1.amazonaws.com/golang:1.22.4-alpine3.19 as build
 ARG GITHUB_TOKEN
 
 WORKDIR /src
