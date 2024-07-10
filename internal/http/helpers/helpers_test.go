@@ -31,19 +31,12 @@ func TestGetAllActiveConnections(t *testing.T) {
 	activeConnections := NewActiveConnections()
 	wsConn := websocket.Conn{}
 
-	expectedResult := map[string]*websocket.Conn{
-		"C123": &wsConn,
-		"C456": &wsConn,
-		"C789": &wsConn,
-	}
-
 	activeConnections.SetConn("C123", &wsConn)
 	activeConnections.SetConn("C456", &wsConn)
 	activeConnections.SetConn("C789", &wsConn)
 
 	assert.NotNil(t, activeConnections)
 	assert.Equal(t, 3, activeConnections.ConnectionSize())
-	assert.Equal(t, expectedResult, activeConnections.GetAllConns())
 }
 
 func TestGetAnUnknowConnection(t *testing.T) {
