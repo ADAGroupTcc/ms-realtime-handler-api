@@ -2,6 +2,7 @@ package websocket
 
 import (
 	"encoding/json"
+	"github.com/PicPay/ms-chatpicpay-websocket-handler-api/pkg/cache"
 	"os"
 	"sync"
 
@@ -11,6 +12,10 @@ import (
 	"github.com/PicPay/ms-chatpicpay-websocket-handler-api/internal/services"
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
+)
+
+const (
+	connectedValue = "connected"
 )
 
 var (
@@ -29,14 +34,16 @@ type websocketHandler struct {
 	subscribeService services.SubscribeServicer
 	instrument       interfaces.Instrument
 	log              *logger.Logger
+	cache            cache.Cache
 }
 
-func NewHandler(publishService services.PublishServicer, subscribeService services.SubscribeServicer, instrument interfaces.Instrument, log *logger.Logger) *websocketHandler {
+func NewHandler(publishService services.PublishServicer, subscribeService services.SubscribeServicer, instrument interfaces.Instrument, cache cache.Cache, log *logger.Logger) *websocketHandler {
 	return &websocketHandler{
 		publishService:   publishService,
 		subscribeService: subscribeService,
 		instrument:       instrument,
 		log:              log,
+		cache:            cache,
 	}
 }
 
@@ -53,6 +60,7 @@ func (h *websocketHandler) WebsocketServer(c *gin.Context) {
 	h.log.Debugf("websocket_handler: user_id: %s connected", userId)
 
 	activeConnections.SetConn(userId, conn)
+	h.cache.Set(userId, userId+":"+connectedValue)
 	h.log.Debugf("websocket_handler: number of active connections: %d", activeConnections.ConnectionSize())
 
 	subscribeEventChan := make(chan []byte)
@@ -81,17 +89,19 @@ func (h *websocketHandler) WebsocketServer(c *gin.Context) {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseNormalClosure) {
 				h.log.Error("websocket_handler: connection closed unexpectedly", err)
 				activeConnections.DeleteConn(userId)
+				h.cache.Delete(userId)
 				return
 			}
 
 			if websocket.IsCloseError(err, websocket.CloseNormalClosure) {
 				h.log.Debug("websocket_handler: connection closed")
 				activeConnections.DeleteConn(userId)
-
+				h.cache.Delete(userId)
 				return
 			}
 
 			activeConnections.DeleteConn(userId)
+			h.cache.Delete(userId)
 			h.log.Error("websocket_handler: failed to read message from webSocket client", err)
 			return
 		}

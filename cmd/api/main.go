@@ -44,6 +44,7 @@ func main() {
 	publisher, _ := kafkaconnector.NewKafkaProducer(envs.KafkaBrokers, log, instrument)
 	subscriber := redisconnector.NewRedisSubscriber(redisConnectionconfig, log, instrument)
 	broker := pubsubconnector.NewPubSubBroker(publisher, subscriber)
+	cache := redisconnector.NewCache(redisConnectionconfig, log)
 
 	httpClient, err := http.New(http.Config{
 		BaseURL:         envs.SessionTokenAPIBaseURL,
@@ -75,6 +76,7 @@ func main() {
 			SubscribeService: subscribeService,
 			SessionClienter:  sessionClient,
 			Instrument:       instrument,
+			Cache:            cache,
 		},
 	)
 

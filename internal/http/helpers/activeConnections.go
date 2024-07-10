@@ -1,17 +1,26 @@
 package helpers
 
-import "github.com/gorilla/websocket"
+import (
+	"github.com/gorilla/websocket"
+	"sync"
+)
 
 type activeConnections struct {
 	users map[string]*websocket.Conn
+	mutex sync.RWMutex
 }
 
 func (activeConns *activeConnections) SetConn(id string, conn *websocket.Conn) {
+	activeConns.mutex.Lock()
 	activeConns.users[id] = conn
+	activeConns.mutex.Unlock()
 }
 
 func (activeConns *activeConnections) GetConn(id string) *websocket.Conn {
-	return activeConns.users[id]
+	activeConns.mutex.RLock()
+	con := activeConns.users[id]
+	activeConns.mutex.RUnlock()
+	return con
 }
 
 func (activeConns *activeConnections) DeleteConn(id string) {
@@ -19,15 +28,16 @@ func (activeConns *activeConnections) DeleteConn(id string) {
 	if connToDelete != nil {
 		connToDelete.Close()
 	}
+	activeConns.mutex.Lock()
 	delete(activeConns.users, id)
-}
-
-func (activeConns *activeConnections) GetAllConns() map[string]*websocket.Conn {
-	return activeConns.users
+	activeConns.mutex.Unlock()
 }
 
 func (activeConns *activeConnections) ConnectionSize() int {
-	return len(activeConns.users)
+	activeConns.mutex.RLock()
+	amount := len(activeConns.users)
+	activeConns.mutex.RUnlock()
+	return amount
 }
 
 func NewActiveConnections() *activeConnections {
