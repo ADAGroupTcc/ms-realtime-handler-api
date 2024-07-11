@@ -1,13 +1,15 @@
-FROM 289208114389.dkr.ecr.us-east-1.amazonaws.com/golang:1.21.5-alpine3.18 as build
+FROM 289208114389.dkr.ecr.us-east-1.amazonaws.com/golang:1.22.5-alpine3.20 as build
 ARG GITHUB_TOKEN
 
 WORKDIR /src
 
+RUN apk add -U --no-cache gcc g++
+
 COPY . .
 
 RUN echo machine github.com login picpay-devex password "$GITHUB_TOKEN" > ~/.netrc \
-    ; GOPRIVATE=github.com/PicPay go mod download \
-    ; CGO_ENABLED=0 go build -ldflags="-s -w" -o bin/api cmd/api/main.go
+    && GOPRIVATE=github.com/PicPay go mod download \
+    && CGO_ENABLED=1 go build -tags musl -ldflags="-linkmode external -w" -o bin/api cmd/api/main.go
 
 FROM 289208114389.dkr.ecr.us-east-1.amazonaws.com/alpine:3.18.2
 

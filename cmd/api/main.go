@@ -2,35 +2,86 @@ package main
 
 import (
 	"context"
+	"os"
+	"time"
 
-	"github.com/PicPay/ms-chatpicpay-websocket-handler-api/book"
-	"github.com/PicPay/ms-chatpicpay-websocket-handler-api/book/postgresql"
-	"github.com/PicPay/ms-chatpicpay-websocket-handler-api/config"
-	"github.com/PicPay/ms-chatpicpay-websocket-handler-api/internal/http/chi" //@todo mude para o framework que for usar. Confira a documentação em https://github.com/PicPay/lib-go-api
 	api "github.com/PicPay/lib-go-api"
-	"github.com/PicPay/lib-go-instrumentation/instruments/factory"
 	logger "github.com/PicPay/lib-go-logger/v2"
-	pperr "github.com/PicPay/lib-go-pperr"
+	"github.com/PicPay/ms-chatpicpay-websocket-handler-api/config"
+	"github.com/PicPay/ms-chatpicpay-websocket-handler-api/internal/clients/sessionClient"
+	"github.com/PicPay/ms-chatpicpay-websocket-handler-api/internal/http/router"
+	"github.com/PicPay/ms-chatpicpay-websocket-handler-api/internal/services"
+	"github.com/PicPay/ms-chatpicpay-websocket-handler-api/pkg/http"
+	"github.com/PicPay/ms-chatpicpay-websocket-handler-api/pkg/instrumentation"
+	"github.com/PicPay/ms-chatpicpay-websocket-handler-api/pkg/pubsubconnector"
+	"github.com/PicPay/ms-chatpicpay-websocket-handler-api/pkg/pubsubconnector/kafkaconnector"
+	"github.com/PicPay/ms-chatpicpay-websocket-handler-api/pkg/pubsubconnector/redisconnector"
 	_ "go.uber.org/automaxprocs"
 )
 
 func main() {
-	l := logger.New(
+	log := logger.New(
 		logger.WithFatalHook(logger.WriteThenFatal),
 	)
-	// inicializando variaveis de ambiente
-	envs := config.LoadEnvVars(l)
+
+	envs := config.LoadEnvVars(log)
 	ctx := context.Background()
-	instrument, err := factory.NewInstrumentationFactory(&factory.Config{}).NewInstrument(ctx)
+
+	instrument := instrumentation.New(instrumentation.Config{
+		Context:        ctx,
+		AppName:        envs.AppName,
+		AppEnv:         envs.AppEnv,
+		Logger:         log,
+		TraceEndpoint:  envs.InstrumentationTracesEndpoint,
+		MetricEndpoint: envs.InstrumentationMetricsEndpoint,
+	})
+
+	redisConnectionconfig := redisconnector.NewConfig(
+		envs.RedisHost,
+		envs.RedisPoolSize,
+	)
+
+	publisher, _ := kafkaconnector.NewKafkaProducer(envs.KafkaBrokers, log, instrument)
+	subscriber := redisconnector.NewRedisSubscriber(redisConnectionconfig, log, instrument)
+	broker := pubsubconnector.NewPubSubBroker(publisher, subscriber)
+	cache := redisconnector.NewCache(redisConnectionconfig, log)
+
+	httpClient, err := http.New(http.Config{
+		BaseURL:         envs.SessionTokenAPIBaseURL,
+		Timeout:         time.Duration(time.Millisecond * time.Duration(envs.SessionTokenAPITimeoutMs)),
+		MaxIdleConns:    envs.SessionTokenMaxIdleConns,
+		MaxConnsPerHost: envs.SessionTokenMaxConnsPerHost,
+		RetryConfig: http.RetryConfig{
+			Retries:         envs.SessionTokenAPIRetryCount,
+			RetryAfter:      time.Duration(time.Duration(envs.SessionTokenAPIRetryIntervalMs) * time.Millisecond),
+			RetryWhenStatus: envs.SessionTokenAPIRetryStatusCodes,
+		},
+		Logger:     log,
+		Instrument: instrument,
+	})
+
+	sessionClient := sessionClient.NewSessionClient(httpClient, instrument)
+
 	if err != nil {
-		l.Panic("error to initialize instrumentation", pperr.Wrap(err))
+		log.Fatal("Failed to create http client", err)
+		os.Exit(1)
 	}
 
-	s := book.NewService(postgresql.New())
-	//@todo mude para o framework que for usar. Confira a documentação em https://github.com/PicPay/lib-go-api
-	h := chi.Handlers(ctx, l, s, instrument)
-	err = api.Start(l, envs.APIPort, h)
+	publishService := services.NewPublishEventService(broker, envs.KafkaPublisherTopic)
+	subscribeService := services.NewSubscribeEventService(broker, envs.RedisSubscribeTopic)
+
+	handlers := router.Handlers(ctx,
+		&router.HandlersDependencies{
+			PublishService:   publishService,
+			SubscribeService: subscribeService,
+			SessionClienter:  sessionClient,
+			Instrument:       instrument,
+			Cache:            cache,
+		},
+	)
+
+	err = api.Start(log, envs.APIPort, handlers)
 	if err != nil {
-		l.Fatal("error running api", err)
+		log.Fatal("Failed to start server", err)
 	}
 }

@@ -26,7 +26,8 @@ metadata:
     backstage.io/techdocs-ref: dir:.
   labels:
     moonlight.picpay/language: go
-    moonlight.picpay/framework: chi
+    moonlight.picpay/framework: gin
+    moonlight.picpay/monitoring: dynatrace
   links:
     - url: https://picpay.atlassian.net/jira/software/c/projects/CHAT/boards/8375
       title: Jira Board
