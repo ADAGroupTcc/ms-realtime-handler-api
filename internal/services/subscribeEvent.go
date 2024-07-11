@@ -16,10 +16,10 @@ type SubscribeEventService struct {
 	topic  string
 }
 
-func NewSubscribeEventService(broker *pubsubconnector.PubSubBroker, topicToPublish string) SubscribeServicer {
+func NewSubscribeEventService(broker *pubsubconnector.PubSubBroker, topicToSubscribe string) SubscribeServicer {
 	return &SubscribeEventService{
 		broker: broker,
-		topic:  topicToPublish,
+		topic:  topicToSubscribe,
 	}
 }
 
