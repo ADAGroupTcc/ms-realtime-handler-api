@@ -21,6 +21,7 @@ type Environments struct {
 	RedisSubscribeTopic                string `envconfig:"REDIS_SUBSCRIBER_TOPIC"`
 	KafkaBrokers                       string `envconfig:"KAFKA_BROKERS"`
 	KafkaPublisherTopic                string `envconfig:"KAFKA_PUBLISHER_TOPIC"`
+	RedisPublisherTopic                string `envconfig:"REDIS_PUBLISHER_TOPIC"`
 	SessionTokenAPIBaseURL             string `envconfig:"SESSION_TOKEN_API_BASE_URL"`
 	SessionTokenAPITimeoutMs           int    `envconfig:"SESSION_TOKEN_API_TIMEOUT_MS"`
 	SessionTokenAPIRetryCount          int    `envconfig:"SESSION_TOKEN_API_RETRY_COUNT"`
