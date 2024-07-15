@@ -3,16 +3,19 @@ package helpers
 import (
 	"github.com/gorilla/websocket"
 	"sync"
+	"time"
 )
 
 type activeConnections struct {
-	users map[string]*websocket.Conn
-	mutex sync.RWMutex
+	users    map[string]*websocket.Conn
+	connTime map[string]time.Time
+	mutex    sync.RWMutex
 }
 
 func (activeConns *activeConnections) SetConn(id string, conn *websocket.Conn) {
 	activeConns.mutex.Lock()
 	activeConns.users[id] = conn
+	activeConns.connTime[id] = time.Now()
 	activeConns.mutex.Unlock()
 }
 
@@ -40,8 +43,16 @@ func (activeConns *activeConnections) ConnectionSize() int {
 	return amount
 }
 
+func (activeConns *activeConnections) GetConnTime(id string) time.Time {
+	activeConns.mutex.RLock()
+	connTime := activeConns.connTime[id]
+	activeConns.mutex.RUnlock()
+	return connTime
+}
+
 func NewActiveConnections() *activeConnections {
 	return &activeConnections{
-		users: make(map[string]*websocket.Conn),
+		users:    make(map[string]*websocket.Conn),
+		connTime: make(map[string]time.Time),
 	}
 }

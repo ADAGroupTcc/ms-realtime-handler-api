@@ -2,18 +2,18 @@ package websocket
 
 import (
 	"encoding/json"
-	"github.com/PicPay/ms-chatpicpay-websocket-handler-api/pkg/cache"
-	"github.com/PicPay/ms-chatpicpay-websocket-handler-api/util"
-	"os"
-	"sync"
-
 	"github.com/PicPay/lib-go-instrumentation/interfaces"
 	logger "github.com/PicPay/lib-go-logger/v2"
 	"github.com/PicPay/ms-chatpicpay-websocket-handler-api/internal/http/helpers"
 	"github.com/PicPay/ms-chatpicpay-websocket-handler-api/internal/services"
+	"github.com/PicPay/ms-chatpicpay-websocket-handler-api/pkg/cache"
+	"github.com/PicPay/ms-chatpicpay-websocket-handler-api/util"
 	_ "github.com/PicPay/ms-chatpicpay-websocket-handler-api/util"
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
+	"os"
+	"sync"
+	"time"
 )
 
 var (
@@ -28,20 +28,28 @@ var (
 )
 
 type websocketHandler struct {
-	publishService   services.PublishServicer
-	subscribeService services.SubscribeServicer
-	instrument       interfaces.Instrument
-	log              *logger.Logger
-	cache            cache.Cache
+	publishService                            services.PublishServicer
+	subscribeService                          services.SubscribeServicer
+	instrument                                interfaces.Instrument
+	log                                       *logger.Logger
+	cache                                     cache.Cache
+	redisCacheConnectionExpirationTimeMinutes int
 }
 
-func NewHandler(publishService services.PublishServicer, subscribeService services.SubscribeServicer, instrument interfaces.Instrument, cache cache.Cache, log *logger.Logger) *websocketHandler {
+func NewHandler(
+	publishService services.PublishServicer,
+	subscribeService services.SubscribeServicer,
+	instrument interfaces.Instrument,
+	cache cache.Cache,
+	log *logger.Logger,
+	redisCacheConnectionExpirationTimeMinutes int) *websocketHandler {
 	return &websocketHandler{
 		publishService:   publishService,
 		subscribeService: subscribeService,
 		instrument:       instrument,
 		log:              log,
 		cache:            cache,
+		redisCacheConnectionExpirationTimeMinutes: redisCacheConnectionExpirationTimeMinutes,
 	}
 }
 
@@ -60,6 +68,7 @@ func (h *websocketHandler) WebsocketServer(c *gin.Context) {
 	activeConnections.SetConn(userId, conn)
 	podName := os.Getenv("HOSTNAME")
 	h.cache.Set(userId, podName)
+
 	h.log.Debugf(util.NumberOfActiveConnections, activeConnections.ConnectionSize())
 
 	subscribeEventChan := make(chan []byte)
@@ -83,6 +92,14 @@ func (h *websocketHandler) WebsocketServer(c *gin.Context) {
 
 	for {
 		_, msg, err := conn.ReadMessage()
+
+		userConnTime := activeConnections.GetConnTime(userId)
+		userConnTimeWithInterval := userConnTime.Add(time.Minute * time.Duration(h.redisCacheConnectionExpirationTimeMinutes))
+		if time.Now().After(userConnTimeWithInterval) {
+			h.cache.Delete(userId)
+			h.cache.Set(userId, podName)
+		}
+
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseNormalClosure) {
 				h.deleteConn(userId, err, util.ConnectionClosedUnexpectedly)

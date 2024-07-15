@@ -77,6 +77,7 @@ func main() {
 			SessionClienter:  sessionClient,
 			Instrument:       instrument,
 			Cache:            cache,
+			RedisCacheConnectionExpirationTimeMinutes: envs.RedisCacheConnectionExpirationTimeMinutes,
 		},
 	)
 
