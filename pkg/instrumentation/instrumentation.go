@@ -2,6 +2,7 @@ package instrumentation
 
 import (
 	"context"
+	"github.com/PicPay/ms-chatpicpay-websocket-handler-api/util"
 	"time"
 
 	"github.com/PicPay/lib-go-instrumentation/instruments/opentelemetry"
@@ -34,7 +35,7 @@ func New(config Config) interfaces.Instrument {
 	)
 
 	if err != nil {
-		config.Logger.Panic("error to initialize instrumentation", pperr.Wrap(err))
+		config.Logger.Panic(util.ErrorToInitInstrumentation, pperr.Wrap(err))
 	}
 
 	return instrumentation
