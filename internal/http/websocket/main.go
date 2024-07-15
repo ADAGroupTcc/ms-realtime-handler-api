@@ -58,7 +58,8 @@ func (h *websocketHandler) WebsocketServer(c *gin.Context) {
 	h.log.Debugf(util.UserIsConnected, userId)
 
 	activeConnections.SetConn(userId, conn)
-	h.cache.Set(userId, userId+":"+util.ConnectedValue)
+	podName := os.Getenv("HOSTNAME")
+	h.cache.Set(userId, podName)
 	h.log.Debugf(util.NumberOfActiveConnections, activeConnections.ConnectionSize())
 
 	subscribeEventChan := make(chan []byte)
@@ -73,7 +74,7 @@ func (h *websocketHandler) WebsocketServer(c *gin.Context) {
 
 			responseConn := activeConnections.GetConn(event.ReceiverId)
 			if responseConn == nil {
-				h.log.Infof(util.ReceiverNotOnlineInPod, event.ReceiverId, os.Getenv("HOSTNAME"))
+				h.log.Infof(util.ReceiverNotOnlineInPod, event.ReceiverId, podName)
 				continue
 			}
 			responseConn.WriteJSON(event)
