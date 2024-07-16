@@ -117,7 +117,7 @@ func (h *websocketHandler) WebsocketServer(c *gin.Context) {
 
 		eventReceived := EventReceived{}
 		err = json.Unmarshal(msg, &eventReceived)
-		if err == nil {
+		if err != nil {
 			sendEventError(
 				conn, util.ErrorTypeErr, eventReceived.EventId, eventReceived.EventType, err, 400,
 			)
