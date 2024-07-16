@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"github.com/PicPay/ms-chatpicpay-websocket-handler-api/util"
 	"os"
 	"time"
 
@@ -62,7 +63,7 @@ func main() {
 	sessionClient := sessionClient.NewSessionClient(httpClient, instrument)
 
 	if err != nil {
-		log.Fatal("Failed to create http client", err)
+		log.Fatal(util.FailedToCreateHttpClient, err)
 		os.Exit(1)
 	}
 
@@ -76,11 +77,12 @@ func main() {
 			SessionClienter:  sessionClient,
 			Instrument:       instrument,
 			Cache:            cache,
+			RedisCacheConnectionExpirationTimeMinutes: envs.RedisCacheConnectionExpirationTimeMinutes,
 		},
 	)
 
 	err = api.Start(log, envs.APIPort, handlers)
 	if err != nil {
-		log.Fatal("Failed to start server", err)
+		log.Fatal(util.FailedToStartServer, err)
 	}
 }

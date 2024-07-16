@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"github.com/PicPay/ms-chatpicpay-websocket-handler-api/util"
 
 	logger "github.com/PicPay/lib-go-logger/v2"
 	"github.com/PicPay/ms-chatpicpay-websocket-handler-api/pkg/pubsubconnector"
@@ -27,7 +28,7 @@ func (p *PublishEventService) PublishEvent(ctx context.Context, message interfac
 	if err := p.broker.Publisher.Publish(ctx, message, &map[string]interface{}{
 		"topic": p.topic,
 	}); err != nil {
-		log.Error("websocket_handler: failed to publish message to pubsub broker", err)
+		log.Error(util.FailedToPublishMessageToPubSubBroker, err)
 		return err
 	}
 
