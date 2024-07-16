@@ -30,7 +30,7 @@ type Environments struct {
 	SessionTokenAPIRetryStatusCodes           []int  `envconfig:"SESSION_TOKEN_API_RETRY_STATUS_CODES"`
 	SessionTokenMaxIdleConns                  int    `envconfig:"SESSION_TOKEN_MAX_IDLE_CONNS"`
 	SessionTokenMaxConnsPerHost               int    `envconfig:"SESSION_TOKEN_MAX_CONNS_PER_HOST"`
-	RedisCacheConnectionExpirationTimeMinutes int    `envconfig:"REDIS_CACHE_CONNECTION_EXPIRATION_TIME_MINUTES" default:"6"`
+	RedisCacheConnectionExpirationTimeMinutes int    `envconfig:"REDIS_CACHE_CONNECTION_EXPIRATION_TIME_MINUTES" default:"5"`
 }
 
 // LoadEnvVars load the environment variables
