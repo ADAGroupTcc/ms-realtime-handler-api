@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"github.com/PicPay/ms-chatpicpay-websocket-handler-api/pkg/pubsubconnector/kafkaconnector"
 	"github.com/PicPay/ms-chatpicpay-websocket-handler-api/util"
 	"os"
 	"time"
@@ -41,7 +42,7 @@ func main() {
 		envs.RedisPoolSize,
 	)
 
-	publisher := redisconnector.NewRedisPublisher(redisConnectionconfig)
+	publisher, _ := kafkaconnector.NewKafkaProducer(envs.KafkaBrokers, log, instrument)
 	subscriber := redisconnector.NewRedisSubscriber(redisConnectionconfig, log, instrument)
 	broker := pubsubconnector.NewPubSubBroker(publisher, subscriber)
 	cache := redisconnector.NewCache(redisConnectionconfig, log)
@@ -67,7 +68,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	publishService := services.NewPublishEventService(broker, envs.RedisPublisherTopic)
+	publishService := services.NewPublishEventService(broker, envs.KafkaPublisherTopic)
 	subscribeService := services.NewSubscribeEventService(broker, envs.RedisSubscribeTopic)
 
 	handlers := router.Handlers(ctx,
