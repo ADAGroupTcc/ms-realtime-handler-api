@@ -31,7 +31,7 @@ func (EventReceived *EventReceived) ToEventToPublish(userId string) *EventToPubl
 	return &EventToPublish{
 		EventType: EventReceived.EventType,
 		EventId:   EventReceived.EventId,
-		SenderId:  userId,
+		UserId:    userId,
 		Data:      EventReceived.Data,
 	}
 }
@@ -39,15 +39,15 @@ func (EventReceived *EventReceived) ToEventToPublish(userId string) *EventToPubl
 type EventToPublish struct {
 	EventType string      `json:"event_type"`
 	EventId   string      `json:"event_id"`
-	SenderId  string      `json:"sender_id"`
+	UserId    string      `json:"user_id"`
 	Data      interface{} `json:"data"`
 }
 
 type EventSubscribed struct {
-	EventType  string      `json:"event_type"`
-	EventId    string      `json:"event_id"`
-	ReceiverId string      `json:"receiver_id"`
-	Data       interface{} `json:"data"`
+	EventType string      `json:"event_type"`
+	EventId   string      `json:"event_id"`
+	UserId    string      `json:"user_id"`
+	Data      interface{} `json:"data"`
 }
 
 func parseEventToSendToReceiver(event []byte) (*EventSubscribed, error) {

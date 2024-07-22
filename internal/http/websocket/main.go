@@ -2,6 +2,10 @@ package websocket
 
 import (
 	"encoding/json"
+	"os"
+	"sync"
+	"time"
+
 	"github.com/PicPay/lib-go-instrumentation/interfaces"
 	logger "github.com/PicPay/lib-go-logger/v2"
 	"github.com/PicPay/ms-chatpicpay-websocket-handler-api/internal/http/helpers"
@@ -11,9 +15,6 @@ import (
 	_ "github.com/PicPay/ms-chatpicpay-websocket-handler-api/util"
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
-	"os"
-	"sync"
-	"time"
 )
 
 var (
@@ -74,19 +75,19 @@ func (h *websocketHandler) WebsocketServer(c *gin.Context) {
 	subscribeEventChan := make(chan []byte)
 	go h.subscribeService.SubscribeAsync(ctx, subscribeEventChan, h.log)
 	go func() {
-		for event := range subscribeEventChan {
-			event, err := parseEventToSendToReceiver(event)
+		for subscribedEvent := range subscribeEventChan {
+			subscribedEvent, err := parseEventToSendToReceiver(subscribedEvent)
 			if err != nil {
 				h.log.Error(util.UnableToParseEventResponse, err)
 				continue
 			}
 
-			responseConn := activeConnections.GetConn(event.ReceiverId)
+			responseConn := activeConnections.GetConn(subscribedEvent.UserId)
 			if responseConn == nil {
-				h.log.Infof(util.ReceiverNotOnlineInPod, event.ReceiverId, podName)
+				h.log.Infof(util.ReceiverNotOnlineInPod, subscribedEvent.UserId, podName)
 				continue
 			}
-			responseConn.WriteJSON(event)
+			responseConn.WriteJSON(subscribedEvent)
 		}
 	}()
 
