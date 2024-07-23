@@ -2,6 +2,7 @@ package router
 
 import (
 	"context"
+
 	"github.com/PicPay/ms-chatpicpay-websocket-handler-api/pkg/cache"
 
 	"github.com/PicPay/lib-go-instrumentation/interfaces"
@@ -19,6 +20,7 @@ type HandlersDependencies struct {
 	SessionClienter                           sessionClient.SessionClienter
 	Instrument                                interfaces.Instrument
 	Cache                                     cache.Cache
+	SubscribeChan                             chan []byte
 	RedisCacheConnectionExpirationTimeMinutes int
 }
 
@@ -41,6 +43,7 @@ func Handlers(ctx context.Context, dependencies *HandlersDependencies) *gin.Engi
 		dependencies.Instrument,
 		dependencies.Cache,
 		logger,
+		dependencies.SubscribeChan,
 		dependencies.RedisCacheConnectionExpirationTimeMinutes)
 
 	gi.Use(middlewares.Authenticate(dependencies.SessionClienter, logger))

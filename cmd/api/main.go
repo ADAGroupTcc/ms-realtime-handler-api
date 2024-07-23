@@ -2,10 +2,11 @@ package main
 
 import (
 	"context"
-	"github.com/PicPay/ms-chatpicpay-websocket-handler-api/pkg/pubsubconnector/kafkaconnector"
-	"github.com/PicPay/ms-chatpicpay-websocket-handler-api/util"
 	"os"
 	"time"
+
+	"github.com/PicPay/ms-chatpicpay-websocket-handler-api/pkg/pubsubconnector/kafkaconnector"
+	"github.com/PicPay/ms-chatpicpay-websocket-handler-api/util"
 
 	api "github.com/PicPay/lib-go-api"
 	logger "github.com/PicPay/lib-go-logger/v2"
@@ -18,6 +19,10 @@ import (
 	"github.com/PicPay/ms-chatpicpay-websocket-handler-api/pkg/pubsubconnector"
 	"github.com/PicPay/ms-chatpicpay-websocket-handler-api/pkg/pubsubconnector/redisconnector"
 	_ "go.uber.org/automaxprocs"
+)
+
+var (
+	SubscribeEventChan = make(chan []byte, 100)
 )
 
 func main() {
@@ -78,9 +83,12 @@ func main() {
 			SessionClienter:  sessionClient,
 			Instrument:       instrument,
 			Cache:            cache,
+			SubscribeChan:    SubscribeEventChan,
 			RedisCacheConnectionExpirationTimeMinutes: envs.RedisCacheConnectionExpirationTimeMinutes,
 		},
 	)
+
+	go subscribeService.SubscribeAsync(ctx, SubscribeEventChan, log)
 
 	err = api.Start(log, envs.APIPort, handlers)
 	if err != nil {

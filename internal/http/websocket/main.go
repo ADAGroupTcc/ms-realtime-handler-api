@@ -34,6 +34,7 @@ type websocketHandler struct {
 	instrument                                interfaces.Instrument
 	log                                       *logger.Logger
 	cache                                     cache.Cache
+	subscribeChan                             chan []byte
 	redisCacheConnectionExpirationTimeMinutes int
 }
 
@@ -43,6 +44,7 @@ func NewHandler(
 	instrument interfaces.Instrument,
 	cache cache.Cache,
 	log *logger.Logger,
+	subscribeChan chan []byte,
 	redisCacheConnectionExpirationTimeMinutes int) *websocketHandler {
 	return &websocketHandler{
 		publishService:   publishService,
@@ -50,6 +52,7 @@ func NewHandler(
 		instrument:       instrument,
 		log:              log,
 		cache:            cache,
+		subscribeChan:    subscribeChan,
 		redisCacheConnectionExpirationTimeMinutes: redisCacheConnectionExpirationTimeMinutes,
 	}
 }
@@ -72,10 +75,12 @@ func (h *websocketHandler) WebsocketServer(c *gin.Context) {
 
 	h.log.Debugf(util.NumberOfActiveConnections, activeConnections.ConnectionSize())
 
-	subscribeEventChan := make(chan []byte)
-	go h.subscribeService.SubscribeAsync(ctx, subscribeEventChan, h.log)
+	// subscribeEventChan := make(chan []byte)
+	// go h.subscribeService.SubscribeAsync(ctx, subscribeEventChan, h.log)
 	go func() {
-		for subscribedEvent := range subscribeEventChan {
+		mutex.Lock()
+		defer mutex.Unlock()
+		for subscribedEvent := range h.subscribeChan {
 			subscribedEvent, err := parseEventToSendToReceiver(subscribedEvent)
 			if err != nil {
 				h.log.Error(util.UnableToParseEventResponse, err)
