@@ -75,20 +75,18 @@ func main() {
 
 	publishService := services.NewPublishEventService(broker, envs.KafkaPublisherTopic)
 	subscribeService := services.NewSubscribeEventService(broker, envs.RedisSubscribeTopic)
+	go subscribeService.SubscribeAsync(ctx, SubscribeEventChan, log)
 
 	handlers := router.Handlers(ctx,
 		&router.HandlersDependencies{
-			PublishService:   publishService,
-			SubscribeService: subscribeService,
-			SessionClienter:  sessionClient,
-			Instrument:       instrument,
-			Cache:            cache,
-			SubscribeChan:    &SubscribeEventChan,
+			PublishService:  publishService,
+			SessionClienter: sessionClient,
+			Instrument:      instrument,
+			Cache:           cache,
+			SubscribeChan:   &SubscribeEventChan,
 			RedisCacheConnectionExpirationTimeMinutes: envs.RedisCacheConnectionExpirationTimeMinutes,
 		},
 	)
-
-	go subscribeService.SubscribeAsync(ctx, SubscribeEventChan, log)
 
 	err = api.Start(log, envs.APIPort, handlers)
 	if err != nil {

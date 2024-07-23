@@ -30,7 +30,6 @@ var (
 
 type websocketHandler struct {
 	publishService                            services.PublishServicer
-	subscribeService                          services.SubscribeServicer
 	instrument                                interfaces.Instrument
 	log                                       *logger.Logger
 	cache                                     cache.Cache
@@ -40,20 +39,38 @@ type websocketHandler struct {
 
 func NewHandler(
 	publishService services.PublishServicer,
-	subscribeService services.SubscribeServicer,
 	instrument interfaces.Instrument,
 	cache cache.Cache,
 	log *logger.Logger,
 	subscribeChan *chan []byte,
 	redisCacheConnectionExpirationTimeMinutes int) *websocketHandler {
 	return &websocketHandler{
-		publishService:   publishService,
-		subscribeService: subscribeService,
-		instrument:       instrument,
-		log:              log,
-		cache:            cache,
-		subscribeChan:    subscribeChan,
+		publishService: publishService,
+		instrument:     instrument,
+		log:            log,
+		cache:          cache,
+		subscribeChan:  subscribeChan,
 		redisCacheConnectionExpirationTimeMinutes: redisCacheConnectionExpirationTimeMinutes,
+	}
+}
+
+func handleSubscriptionResponse(subscriptionChan *chan []byte, podName string, log *logger.Logger) {
+	mutex.Lock()
+	defer mutex.Unlock()
+	for subscribedEvent := range *subscriptionChan {
+		subscribedEvent, err := parseEventToSendToReceiver(subscribedEvent)
+		if err != nil {
+			log.Error(util.UnableToParseEventResponse, err)
+			continue
+		}
+
+		responseConn := activeConnections.GetConn(subscribedEvent.UserId)
+		if responseConn == nil {
+			log.Infof(util.ReceiverNotOnlineInPod, subscribedEvent.UserId, podName)
+			continue
+		}
+		responseConn.WriteJSON(subscribedEvent)
+		log.Infof("websocket_handler: event sent to receiver_id with data: %v", subscribedEvent.UserId, subscribedEvent.Data)
 	}
 }
 
@@ -75,27 +92,7 @@ func (h *websocketHandler) WebsocketServer(c *gin.Context) {
 
 	h.log.Debugf(util.NumberOfActiveConnections, activeConnections.ConnectionSize())
 
-	// subscribeEventChan := make(chan []byte)
-	// go h.subscribeService.SubscribeAsync(ctx, subscribeEventChan, h.log)
-	go func() {
-		mutex.Lock()
-		defer mutex.Unlock()
-		for subscribedEvent := range *h.subscribeChan {
-			subscribedEvent, err := parseEventToSendToReceiver(subscribedEvent)
-			if err != nil {
-				h.log.Error(util.UnableToParseEventResponse, err)
-				continue
-			}
-
-			responseConn := activeConnections.GetConn(subscribedEvent.UserId)
-			if responseConn == nil {
-				h.log.Infof(util.ReceiverNotOnlineInPod, subscribedEvent.UserId, podName)
-				continue
-			}
-			responseConn.WriteJSON(subscribedEvent)
-			h.log.Infof("websocket_handler: event sent to receiver_id with data: %v", subscribedEvent.UserId, subscribedEvent.Data)
-		}
-	}()
+	go handleSubscriptionResponse(h.subscribeChan, podName, h.log)
 
 	for {
 		_, msg, err := conn.ReadMessage()

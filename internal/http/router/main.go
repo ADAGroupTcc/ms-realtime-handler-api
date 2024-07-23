@@ -16,7 +16,6 @@ import (
 
 type HandlersDependencies struct {
 	PublishService                            services.PublishServicer
-	SubscribeService                          services.SubscribeServicer
 	SessionClienter                           sessionClient.SessionClienter
 	Instrument                                interfaces.Instrument
 	Cache                                     cache.Cache
@@ -39,14 +38,13 @@ func Handlers(ctx context.Context, dependencies *HandlersDependencies) *gin.Engi
 
 	websocketHandler := websocket.NewHandler(
 		dependencies.PublishService,
-		dependencies.SubscribeService,
 		dependencies.Instrument,
 		dependencies.Cache,
 		logger,
 		dependencies.SubscribeChan,
 		dependencies.RedisCacheConnectionExpirationTimeMinutes)
 
-	// gi.Use(middlewares.Authenticate(dependencies.SessionClienter, logger))
+	gi.Use(middlewares.Authenticate(dependencies.SessionClienter, logger))
 
 	gi.GET("/ws", websocketHandler.WebsocketServer)
 
