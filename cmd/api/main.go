@@ -83,7 +83,7 @@ func main() {
 			SessionClienter:  sessionClient,
 			Instrument:       instrument,
 			Cache:            cache,
-			SubscribeChan:    SubscribeEventChan,
+			SubscribeChan:    &SubscribeEventChan,
 			RedisCacheConnectionExpirationTimeMinutes: envs.RedisCacheConnectionExpirationTimeMinutes,
 		},
 	)

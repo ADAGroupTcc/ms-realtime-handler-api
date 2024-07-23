@@ -31,20 +31,13 @@ func (redisSubscriber *redisSubscriber) SubscribeAsync(ctx context.Context, topi
 
 	ch := pubsub.Channel()
 
-	msg := <-ch
-	eventsChan <- []byte(msg.Payload)
-	redisSubscriber.log.Info("redis_subscriber: received message from topic", logger.WithEvent(logger.Event{
-		"topic":   msg.Channel,
-		"payload": msg.Payload,
-	}))
-
-	//for msg := range ch {
-	//	eventsChan <- []byte(msg.Payload)
-	//	redisSubscriber.log.Info("redis_subscriber: received message from topic", logger.WithEvent(logger.Event{
-	//		"topic":   msg.Channel,
-	//		"payload": msg.Payload,
-	//	}))
-	//}
+	for msg := range ch {
+		eventsChan <- []byte(msg.Payload)
+		redisSubscriber.log.Info("redis_subscriber: received message from topic", logger.WithEvent(logger.Event{
+			"topic":   msg.Channel,
+			"payload": msg.Payload,
+		}))
+	}
 }
 
 // TODO: implementar observabilidade

@@ -20,7 +20,7 @@ type HandlersDependencies struct {
 	SessionClienter                           sessionClient.SessionClienter
 	Instrument                                interfaces.Instrument
 	Cache                                     cache.Cache
-	SubscribeChan                             chan []byte
+	SubscribeChan                             *chan []byte
 	RedisCacheConnectionExpirationTimeMinutes int
 }
 
@@ -46,7 +46,7 @@ func Handlers(ctx context.Context, dependencies *HandlersDependencies) *gin.Engi
 		dependencies.SubscribeChan,
 		dependencies.RedisCacheConnectionExpirationTimeMinutes)
 
-	gi.Use(middlewares.Authenticate(dependencies.SessionClienter, logger))
+	// gi.Use(middlewares.Authenticate(dependencies.SessionClienter, logger))
 
 	gi.GET("/ws", websocketHandler.WebsocketServer)
 
