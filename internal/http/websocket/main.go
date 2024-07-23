@@ -88,6 +88,7 @@ func (h *websocketHandler) WebsocketServer(c *gin.Context) {
 				continue
 			}
 			responseConn.WriteJSON(subscribedEvent)
+			h.log.Infof("websocket_handler: event sent to receiver_id with data: %v", subscribedEvent.UserId, subscribedEvent.Data)
 		}
 	}()
 
