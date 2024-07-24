@@ -5,6 +5,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/PicPay/ms-chatpicpay-websocket-handler-api/pkg/cache/rediscache"
 	"github.com/PicPay/ms-chatpicpay-websocket-handler-api/pkg/pubsubconnector/kafkaconnector"
 	"github.com/PicPay/ms-chatpicpay-websocket-handler-api/util"
 
@@ -19,10 +20,6 @@ import (
 	"github.com/PicPay/ms-chatpicpay-websocket-handler-api/pkg/pubsubconnector"
 	"github.com/PicPay/ms-chatpicpay-websocket-handler-api/pkg/pubsubconnector/redisconnector"
 	_ "go.uber.org/automaxprocs"
-)
-
-var (
-	SubscribeEventChan = make(chan []byte, 100)
 )
 
 func main() {
@@ -42,15 +39,17 @@ func main() {
 		MetricEndpoint: envs.InstrumentationMetricsEndpoint,
 	})
 
-	redisConnectionconfig := redisconnector.NewConfig(
+	redisPubSubConnectionconfig := redisconnector.NewConfig(
 		envs.RedisHost,
 		envs.RedisPoolSize,
 	)
 
+	redisCacheConnectionConfig := rediscache.NewConfig(envs.RedisHost)
+
 	publisher, _ := kafkaconnector.NewKafkaProducer(envs.KafkaBrokers, log, instrument)
-	subscriber := redisconnector.NewRedisSubscriber(redisConnectionconfig, log, instrument)
+	subscriber := redisconnector.NewRedisSubscriber(redisPubSubConnectionconfig, log, instrument)
 	broker := pubsubconnector.NewPubSubBroker(publisher, subscriber)
-	cache := redisconnector.NewCache(redisConnectionconfig, log)
+	cache := rediscache.NewCache(redisCacheConnectionConfig, log)
 
 	httpClient, err := http.New(http.Config{
 		BaseURL:         envs.SessionTokenAPIBaseURL,
@@ -73,17 +72,20 @@ func main() {
 		os.Exit(1)
 	}
 
+	subscribeEventChan := make(chan []byte, 100)
+
+	wsConnectionsService := services.NewWebsocketConnectionsService()
 	publishService := services.NewPublishEventService(broker, envs.KafkaPublisherTopic)
-	subscribeService := services.NewSubscribeEventService(broker, envs.RedisSubscribeTopic)
-	go subscribeService.SubscribeAsync(ctx, SubscribeEventChan, log)
+	subscribeService := services.NewSubscribeEventService(broker, envs.RedisSubscribeTopic, subscribeEventChan, wsConnectionsService)
 
 	handlers := router.Handlers(ctx,
 		&router.HandlersDependencies{
-			PublishService:  publishService,
-			SessionClienter: sessionClient,
-			Instrument:      instrument,
-			Cache:           cache,
-			SubscribeChan:   &SubscribeEventChan,
+			PublishService:      publishService,
+			SubscribeService:    subscribeService,
+			WsConnectionService: wsConnectionsService,
+			SessionClienter:     sessionClient,
+			Instrument:          instrument,
+			Cache:               cache,
 			RedisCacheConnectionExpirationTimeMinutes: envs.RedisCacheConnectionExpirationTimeMinutes,
 		},
 	)

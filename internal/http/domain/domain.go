@@ -1,4 +1,4 @@
-package websocket
+package domain
 
 import (
 	"encoding/json"
@@ -50,7 +50,7 @@ type EventSubscribed struct {
 	Data      interface{} `json:"data"`
 }
 
-func parseEventToSendToReceiver(event []byte) (*EventSubscribed, error) {
+func ParseEventToSendToReceiver(event []byte) (*EventSubscribed, error) {
 	eventSubscribedDomain := EventSubscribed{}
 	err := json.Unmarshal(event, &eventSubscribedDomain)
 	if err != nil {
