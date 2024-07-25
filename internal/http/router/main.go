@@ -43,7 +43,7 @@ func Handlers(ctx context.Context, dependencies *HandlersDependencies) *gin.Engi
 		logger,
 		dependencies.RedisCacheConnectionExpirationTimeMinutes)
 
-	// gi.Use(middlewares.Authenticate(dependencies.SessionClienter, logger))
+	gi.Use(middlewares.Authenticate(dependencies.SessionClienter, logger))
 
 	go dependencies.SubscribeService.SubscribeAsync(ctx, logger)
 	go dependencies.SubscribeService.HandleSubscriptionResponse(os.Getenv("HOSTNAME"), logger)
