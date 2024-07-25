@@ -2,10 +2,12 @@ package main
 
 import (
 	"context"
-	"github.com/PicPay/ms-chatpicpay-websocket-handler-api/pkg/pubsubconnector/kafkaconnector"
-	"github.com/PicPay/ms-chatpicpay-websocket-handler-api/util"
 	"os"
 	"time"
+
+	"github.com/PicPay/ms-chatpicpay-websocket-handler-api/pkg/cache/rediscache"
+	"github.com/PicPay/ms-chatpicpay-websocket-handler-api/pkg/pubsubconnector/kafkaconnector"
+	"github.com/PicPay/ms-chatpicpay-websocket-handler-api/util"
 
 	api "github.com/PicPay/lib-go-api"
 	logger "github.com/PicPay/lib-go-logger/v2"
@@ -37,15 +39,17 @@ func main() {
 		MetricEndpoint: envs.InstrumentationMetricsEndpoint,
 	})
 
-	redisConnectionconfig := redisconnector.NewConfig(
+	redisPubSubConnectionconfig := redisconnector.NewConfig(
 		envs.RedisHost,
 		envs.RedisPoolSize,
 	)
 
+	redisCacheConnectionConfig := rediscache.NewConfig(envs.RedisHost)
+
 	publisher, _ := kafkaconnector.NewKafkaProducer(envs.KafkaBrokers, log, instrument)
-	subscriber := redisconnector.NewRedisSubscriber(redisConnectionconfig, log, instrument)
+	subscriber := redisconnector.NewRedisSubscriber(redisPubSubConnectionconfig, log, instrument)
 	broker := pubsubconnector.NewPubSubBroker(publisher, subscriber)
-	cache := redisconnector.NewCache(redisConnectionconfig, log)
+	cache := rediscache.NewCache(redisCacheConnectionConfig, log)
 
 	httpClient, err := http.New(http.Config{
 		BaseURL:         envs.SessionTokenAPIBaseURL,
@@ -68,16 +72,20 @@ func main() {
 		os.Exit(1)
 	}
 
+	subscribeEventChan := make(chan []byte, 100)
+
+	wsConnectionsService := services.NewWebsocketConnectionsService()
 	publishService := services.NewPublishEventService(broker, envs.KafkaPublisherTopic)
-	subscribeService := services.NewSubscribeEventService(broker, envs.RedisSubscribeTopic)
+	subscribeService := services.NewSubscribeEventService(broker, envs.RedisSubscribeTopic, subscribeEventChan, wsConnectionsService)
 
 	handlers := router.Handlers(ctx,
 		&router.HandlersDependencies{
-			PublishService:   publishService,
-			SubscribeService: subscribeService,
-			SessionClienter:  sessionClient,
-			Instrument:       instrument,
-			Cache:            cache,
+			PublishService:      publishService,
+			SubscribeService:    subscribeService,
+			WsConnectionService: wsConnectionsService,
+			SessionClienter:     sessionClient,
+			Instrument:          instrument,
+			Cache:               cache,
 			RedisCacheConnectionExpirationTimeMinutes: envs.RedisCacheConnectionExpirationTimeMinutes,
 		},
 	)

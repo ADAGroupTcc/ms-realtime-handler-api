@@ -1,19 +1,20 @@
 package websocket
 
 import (
+	"context"
 	"encoding/json"
+	"net/http"
+	"os"
+	"time"
+
 	"github.com/PicPay/lib-go-instrumentation/interfaces"
 	logger "github.com/PicPay/lib-go-logger/v2"
-	"github.com/PicPay/ms-chatpicpay-websocket-handler-api/internal/http/helpers"
+	"github.com/PicPay/ms-chatpicpay-websocket-handler-api/internal/http/domain"
 	"github.com/PicPay/ms-chatpicpay-websocket-handler-api/internal/services"
 	"github.com/PicPay/ms-chatpicpay-websocket-handler-api/pkg/cache"
 	"github.com/PicPay/ms-chatpicpay-websocket-handler-api/util"
-	_ "github.com/PicPay/ms-chatpicpay-websocket-handler-api/util"
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
-	"os"
-	"sync"
-	"time"
 )
 
 var (
@@ -21,34 +22,33 @@ var (
 		ReadBufferSize:  1024,
 		WriteBufferSize: 1024,
 	}
-
-	mutex sync.Mutex
-
-	activeConnections = helpers.NewActiveConnections()
 )
 
 type websocketHandler struct {
 	publishService                            services.PublishServicer
 	subscribeService                          services.SubscribeServicer
+	wsConnectionService                       services.WsConnectionServicer
 	instrument                                interfaces.Instrument
-	log                                       *logger.Logger
 	cache                                     cache.Cache
+	log                                       *logger.Logger
 	redisCacheConnectionExpirationTimeMinutes int
 }
 
 func NewHandler(
 	publishService services.PublishServicer,
 	subscribeService services.SubscribeServicer,
+	wsConnectionService services.WsConnectionServicer,
 	instrument interfaces.Instrument,
 	cache cache.Cache,
 	log *logger.Logger,
 	redisCacheConnectionExpirationTimeMinutes int) *websocketHandler {
 	return &websocketHandler{
-		publishService:   publishService,
-		subscribeService: subscribeService,
-		instrument:       instrument,
-		log:              log,
-		cache:            cache,
+		publishService:      publishService,
+		subscribeService:    subscribeService,
+		wsConnectionService: wsConnectionService,
+		instrument:          instrument,
+		cache:               cache,
+		log:                 log,
 		redisCacheConnectionExpirationTimeMinutes: redisCacheConnectionExpirationTimeMinutes,
 	}
 }
@@ -61,120 +61,88 @@ func (h *websocketHandler) WebsocketServer(c *gin.Context) {
 	}
 
 	ctx := c.Request.Context()
-
+	podName := os.Getenv("HOSTNAME")
 	userId := c.Request.Header.Get("user_id")
+
 	h.log.Debugf(util.UserIsConnected, userId)
 
-	activeConnections.SetConn(userId, conn)
-	podName := os.Getenv("HOSTNAME")
-	h.cache.Set(userId, podName)
+	h.wsConnectionService.SetConn(userId, conn)
+	h.cache.Set(ctx, userId, podName)
 
-	h.log.Debugf(util.NumberOfActiveConnections, activeConnections.ConnectionSize())
-
-	subscribeEventChan := make(chan []byte)
-	go h.subscribeService.SubscribeAsync(ctx, subscribeEventChan, h.log)
-	go func() {
-		for event := range subscribeEventChan {
-			event, err := parseEventToSendToReceiver(event)
-			if err != nil {
-				h.log.Error(util.UnableToParseEventResponse, err)
-				continue
-			}
-
-			responseConn := activeConnections.GetConn(event.ReceiverId)
-			if responseConn == nil {
-				h.log.Infof(util.ReceiverNotOnlineInPod, event.ReceiverId, podName)
-				continue
-			}
-			responseConn.WriteJSON(event)
-		}
-	}()
+	h.log.Debugf(util.NumberOfActiveConnections, h.wsConnectionService.ConnectionSize())
 
 	for {
 		_, msg, err := conn.ReadMessage()
-
-		userConnTime := activeConnections.GetConnTime(userId)
-		userConnTimeWithInterval := userConnTime.Add(time.Minute * time.Duration(h.redisCacheConnectionExpirationTimeMinutes))
-		if time.Now().After(userConnTimeWithInterval) {
-			h.cache.Delete(userId)
-			h.cache.Set(userId, podName)
-		}
+		h.refreshUserConnection(ctx, userId, podName, h.redisCacheConnectionExpirationTimeMinutes, h.cache, h.log)
 
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseNormalClosure) {
-				h.deleteConn(userId, err, util.ConnectionClosedUnexpectedly)
+				h.deleteConn(ctx, userId, err, util.ConnectionClosedUnexpectedly)
 				return
 			}
 
 			if websocket.IsCloseError(err, websocket.CloseNormalClosure) {
-				h.deleteConn(userId, err, util.ConnectionClosed)
+				h.deleteConn(ctx, userId, err, util.ConnectionClosed)
 				return
 			}
 
-			h.deleteConn(userId, err, util.FailedToReadMessageFromWebsocket)
+			h.deleteConn(ctx, userId, err, util.FailedToReadMessageFromWebsocket)
 			return
 		}
 
-		eventReceived := EventReceived{}
+		eventReceived := domain.EventReceived{}
 		err = json.Unmarshal(msg, &eventReceived)
 		if err != nil {
-			sendEventError(
-				conn, util.ErrorTypeErr, eventReceived.EventId, eventReceived.EventType, err, 400,
-			)
 			h.log.Error(util.FailedToUnmarshalMessage, err)
+			activeConn := h.wsConnectionService.GetConn(userId)
+			if activeConn != nil {
+				sendEventError(activeConn.Conn, eventReceived.EventId, eventReceived.EventType, err, http.StatusBadRequest)
+			}
 			return
 		}
 
 		err = eventReceived.Validate()
 		if err != nil {
-			sendEventError(
-				conn, util.ErrorTypeErr, eventReceived.EventId, eventReceived.EventType, err, 400,
-			)
-
-			h.getActiveConn(userId, err, util.FailedToValidateMessage, 400)
+			h.log.Error(util.FailedToValidateMessage, err)
+			activeConn := h.wsConnectionService.GetConn(userId)
+			if activeConn != nil {
+				sendEventError(activeConn.Conn, eventReceived.EventId, eventReceived.EventType, err, http.StatusBadRequest)
+			}
 			return
 		}
 
 		eventToPublish := eventReceived.ToEventToPublish(userId)
 		err = h.publishService.PublishEvent(ctx, eventToPublish, h.log)
-
 		if err != nil {
-			h.getActiveConn(userId, err, util.FailedToPublishMessageToPubSubBroker, 500)
+			h.log.Error(util.FailedToPublishMessageToPubSubBroker, err)
+			activeConn := h.wsConnectionService.GetConn(userId)
+			sendEventError(activeConn.Conn, eventReceived.EventId, eventReceived.EventType, err, http.StatusInternalServerError)
 			return
 		}
 	}
 }
 
-func (h *websocketHandler) getActiveConn(userId string, err error, errDescr string, errorCode int) {
-	h.log.Error(errDescr, err)
-	activeConn := activeConnections.GetConn(userId)
-	if activeConn != nil {
-		sendError(activeConn, util.ErrorTypeErr, err, errorCode)
-	}
-}
-
-func (h *websocketHandler) deleteConn(userId string, err error, errDescr string) {
-	activeConnections.DeleteConn(userId)
-	h.cache.Delete(userId)
+func (h *websocketHandler) deleteConn(ctx context.Context, userId string, err error, errDescr string) {
+	h.wsConnectionService.DeleteConn(userId)
+	h.cache.Delete(ctx, userId)
 	h.log.Error(errDescr, err)
 }
 
-func sendError(conn *websocket.Conn, errorType string, err error, code int) {
-	conn.WriteJSON(map[string]interface{}{
-		"type":  errorType,
-		"error": err.Error(),
-		"code":  code,
-	})
-}
-
-func sendEventError(conn *websocket.Conn, errorType string, eventId string, eventName string, err error, code int) {
+func sendEventError(conn *websocket.Conn, eventId string, eventName string, err error, code int) {
 	conn.WriteJSON(map[string]interface{}{
 		"event_id":   eventId,
 		"event_name": eventName,
 		"content": map[string]interface{}{
-			"type":  errorType,
 			"error": err.Error(),
 			"code":  code,
 		},
 	})
+}
+
+func (h *websocketHandler) refreshUserConnection(ctx context.Context, userId string, podName string, expirationTime int, cache cache.Cache, log *logger.Logger) {
+	userConnTime := h.wsConnectionService.GetConnStartTime(userId)
+	userConnTimeWithInterval := userConnTime.Add(time.Minute * time.Duration(expirationTime))
+	if time.Now().After(userConnTimeWithInterval) {
+		cache.Set(ctx, userId, podName)
+	}
 }

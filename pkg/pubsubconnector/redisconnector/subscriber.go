@@ -33,7 +33,10 @@ func (redisSubscriber *redisSubscriber) SubscribeAsync(ctx context.Context, topi
 
 	for msg := range ch {
 		eventsChan <- []byte(msg.Payload)
-		redisSubscriber.log.Debugf("redis_subscriber: received message from topic %s: %s\n", msg.Channel, msg.Payload)
+		redisSubscriber.log.Info("redis_subscriber: received message from topic", logger.WithEvent(logger.Event{
+			"topic":   msg.Channel,
+			"payload": msg.Payload,
+		}))
 	}
 }
 
