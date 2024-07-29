@@ -43,16 +43,15 @@ func Handlers(ctx context.Context, dependencies *HandlersDependencies) *gin.Engi
 		logger,
 		dependencies.RedisCacheConnectionExpirationTimeMinutes)
 
+	gi.GET("/health", func(c *gin.Context) {
+		c.JSON(200, gin.H{"status": "ok"})
+	})
+
 	gi.Use(middlewares.Authenticate(dependencies.SessionClienter, logger))
 
 	go dependencies.SubscribeService.SubscribeAsync(ctx, logger)
 	go dependencies.SubscribeService.HandleSubscriptionResponse(os.Getenv("HOSTNAME"), logger)
-
 	gi.GET("/ws", websocketHandler.WebsocketServer)
-
-	gi.GET("/health", func(c *gin.Context) {
-		c.JSON(200, gin.H{"status": "ok"})
-	})
 
 	return gi
 }
