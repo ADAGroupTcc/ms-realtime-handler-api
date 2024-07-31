@@ -54,6 +54,9 @@ func NewHandler(
 }
 
 func (h *websocketHandler) WebsocketServer(c *gin.Context) {
+	upgrader.CheckOrigin = func(r *http.Request) bool {
+		return true
+	}
 	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
 		h.log.Error(util.FailedToUpgradeConnection, err)
@@ -64,7 +67,7 @@ func (h *websocketHandler) WebsocketServer(c *gin.Context) {
 	podName := os.Getenv("HOSTNAME")
 	userId := c.Request.Header.Get("user_id")
 
-	h.log.Debugf(util.UserIsConnected, userId)
+	h.log.Debugf(util.UserIsConnected, userId, podName)
 
 	h.wsConnectionService.SetConn(userId, conn)
 	h.cache.Set(ctx, userId, podName)
@@ -119,6 +122,7 @@ func (h *websocketHandler) WebsocketServer(c *gin.Context) {
 			sendEventError(activeConn.Conn, eventReceived.EventId, eventReceived.EventType, err, http.StatusInternalServerError)
 			return
 		}
+		h.log.Infof(util.PublishMessageToPubSubBrokerSuccessfully, eventReceived.EventType)
 	}
 }
 
