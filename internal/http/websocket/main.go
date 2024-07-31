@@ -56,9 +56,6 @@ func NewHandler(
 }
 
 func (h *websocketHandler) WebsocketServer(c *gin.Context) {
-	upgrader.CheckOrigin = func(r *http.Request) bool {
-		return true
-	}
 	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
 		h.log.Error(util.FailedToUpgradeConnection, err)
