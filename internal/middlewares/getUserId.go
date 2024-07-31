@@ -7,6 +7,11 @@ import (
 
 func GetUserIdFromHeader(log *logger.Logger) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		if c.Request.URL.Path == "/health" {
+			c.Next()
+			return
+		}
+
 		userId := c.GetHeader("user_id")
 
 		if userId == "" {
