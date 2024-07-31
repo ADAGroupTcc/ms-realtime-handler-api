@@ -3,7 +3,6 @@ package websocket
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"os"
 	"time"
@@ -16,7 +15,6 @@ import (
 	"github.com/PicPay/ms-chatpicpay-websocket-handler-api/util"
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
-	"github.com/labstack/gommon/log"
 )
 
 var (
@@ -69,9 +67,7 @@ func (h *websocketHandler) WebsocketServer(c *gin.Context) {
 	podName := os.Getenv("HOSTNAME")
 	userId := c.Request.Header.Get("user_id")
 
-	log.Info(fmt.Sprintf("Headers: user-agent: %s   |   origin: %s   |    host: %s", c.Request.Header.Get("user-agent"), c.Request.Header.Get("origin"), c.Request.Host))
-
-	h.log.Infof(util.UserIsConnected, userId, podName)
+	h.log.Debugf(util.UserIsConnected, userId, podName)
 
 	h.wsConnectionService.SetConn(userId, conn)
 	h.cache.Set(ctx, userId, podName)
@@ -126,6 +122,7 @@ func (h *websocketHandler) WebsocketServer(c *gin.Context) {
 			sendEventError(activeConn.Conn, eventReceived.EventId, eventReceived.EventType, err, http.StatusInternalServerError)
 			return
 		}
+		h.log.Infof(util.PublishMessageToPubSubBrokerSuccessfully, eventReceived.EventType)
 	}
 }
 
