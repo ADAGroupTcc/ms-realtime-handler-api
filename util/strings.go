@@ -2,7 +2,7 @@ package util
 
 const (
 	ConnectedValue                       = "connected"
-	UserIsConnected                      = "websocket_handler: user_id: %s connected"
+	UserIsConnected                      = "websocket_handler: user_id: %s connected in this pod_name: %s"
 	ErrorTypeErr                         = "error"
 	NumberOfActiveConnections            = "websocket_handler: number of active connections: %d"
 	FailedToUpgradeConnection            = "websocket_handler: failed to upgrade connection"

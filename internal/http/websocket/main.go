@@ -64,7 +64,7 @@ func (h *websocketHandler) WebsocketServer(c *gin.Context) {
 	podName := os.Getenv("HOSTNAME")
 	userId := c.Request.Header.Get("user_id")
 
-	h.log.Debugf(util.UserIsConnected, userId)
+	h.log.Infof(util.UserIsConnected, userId, podName)
 
 	h.wsConnectionService.SetConn(userId, conn)
 	h.cache.Set(ctx, userId, podName)

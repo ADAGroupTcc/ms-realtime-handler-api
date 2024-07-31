@@ -33,6 +33,7 @@ func Handlers(ctx context.Context, dependencies *HandlersDependencies) *gin.Engi
 	gi.Use(middlewares.EnhanceLogger(jsonFormatter))
 
 	logger := logs.New(jsonFormatter)
+	gi.Use(middlewares.GetUserIdFromHeader(logger))
 
 	websocketHandler := websocket.NewHandler(
 		dependencies.PublishService,
@@ -46,8 +47,6 @@ func Handlers(ctx context.Context, dependencies *HandlersDependencies) *gin.Engi
 	gi.GET("/health", func(c *gin.Context) {
 		c.JSON(200, gin.H{"status": "ok"})
 	})
-
-	gi.Use(middlewares.Authenticate(dependencies.SessionClienter, logger))
 
 	go dependencies.SubscribeService.SubscribeAsync(ctx, logger)
 	go dependencies.SubscribeService.HandleSubscriptionResponse(os.Getenv("HOSTNAME"), logger)
