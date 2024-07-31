@@ -3,6 +3,7 @@ package websocket
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"os"
 	"time"
@@ -15,6 +16,7 @@ import (
 	"github.com/PicPay/ms-chatpicpay-websocket-handler-api/util"
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
+	"github.com/labstack/gommon/log"
 )
 
 var (
@@ -54,6 +56,9 @@ func NewHandler(
 }
 
 func (h *websocketHandler) WebsocketServer(c *gin.Context) {
+	upgrader.CheckOrigin = func(r *http.Request) bool {
+		return true
+	}
 	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
 		h.log.Error(util.FailedToUpgradeConnection, err)
@@ -63,6 +68,8 @@ func (h *websocketHandler) WebsocketServer(c *gin.Context) {
 	ctx := c.Request.Context()
 	podName := os.Getenv("HOSTNAME")
 	userId := c.Request.Header.Get("user_id")
+
+	log.Info(fmt.Sprintf("Headers: user-agent: %s   |   origin: %s   |    host: %s", c.Request.Header.Get("user-agent"), c.Request.Header.Get("origin"), c.Request.Host))
 
 	h.log.Infof(util.UserIsConnected, userId, podName)
 

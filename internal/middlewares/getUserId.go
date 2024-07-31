@@ -7,13 +7,6 @@ import (
 
 func GetUserIdFromHeader(log *logger.Logger) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		headerString := ""
-		for key, value := range c.Request.Header {
-			headerString += key + ": " + value[0] + " | "
-		}
-
-		log.Info("Headers: " + headerString)
-
 		userId := c.GetHeader("user_id")
 
 		if userId == "" {
