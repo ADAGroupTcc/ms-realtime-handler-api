@@ -37,17 +37,17 @@ func (s *SubscribeEventService) SubscribeAsync(ctx context.Context, log *logger.
 
 func (s *SubscribeEventService) HandleSubscriptionResponse(podName string, log *logger.Logger) {
 	for subscribedEvent := range s.subscribeChan {
-		subscribedEvent, err := domain.ParseEventToSendToReceiver(subscribedEvent)
+		eventReceived, err := domain.ParseEventToSendToReceiver(subscribedEvent)
 		if err != nil {
 			log.Error(util.UnableToParseEventResponse, err)
 			continue
 		}
-		activeConn := s.wsConnectionService.GetConn(subscribedEvent.UserId)
+		activeConn := s.wsConnectionService.GetConn(eventReceived.UserId)
 		if activeConn == nil {
-			log.Infof(util.ReceiverNotOnlineInPod, subscribedEvent.UserId, podName)
+			log.Infof(util.ReceiverNotOnlineInPod, eventReceived.UserId, podName)
 			continue
 		}
-		activeConn.Conn.WriteJSON(subscribedEvent)
-		log.Infof("websocket_handler: event %s sent to receiver_id %s", subscribedEvent.EventType, subscribedEvent.UserId)
+		activeConn.Conn.WriteJSON(eventReceived)
+		log.Infof("websocket_handler: event %s sent to receiver_id %s", eventReceived.EventType, eventReceived.UserId)
 	}
 }

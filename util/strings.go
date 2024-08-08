@@ -6,6 +6,7 @@ const (
 	NumberOfActiveConnections                = "websocket_handler: number of active connections: %d\n"
 	FailedToUpgradeConnection                = "websocket_handler: failed to upgrade connection"
 	UnableToParseEventResponse               = "unable to parser eventToReceiver response"
+	UnableToParseWsEventResponse             = "unable to parser websocket event response"
 	ReceiverNotOnlineInPod                   = "receiver_id %s is not online in this pod_name: %s\n"
 	ConnectionClosedUnexpectedly             = "websocket_handler: connection closed unexpectedly"
 	ConnectionClosed                         = "websocket_handler: connection closed"
