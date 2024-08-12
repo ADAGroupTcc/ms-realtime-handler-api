@@ -105,7 +105,7 @@ func (wsConnection *websocketConnections) RefreshConnection(ctx context.Context,
 		return nil
 	})
 
-	ticker := time.NewTicker(wsConnection.readDeadlineWait + 2*time.Second)
+	ticker := time.NewTicker(wsConnection.readDeadlineWait - 2*time.Second)
 
 	for {
 		select {
