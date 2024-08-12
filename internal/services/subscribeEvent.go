@@ -42,13 +42,12 @@ func (s *SubscribeEventService) HandleSubscriptionResponse(podName string, log *
 			log.Error(util.UnableToParseEventResponse, err)
 			continue
 		}
-
-		responseConn := s.wsConnectionService.GetConn(subscribedEvent.UserId).Conn
-		if responseConn == nil {
+		activeConn := s.wsConnectionService.GetConn(subscribedEvent.UserId)
+		if activeConn == nil {
 			log.Infof(util.ReceiverNotOnlineInPod, subscribedEvent.UserId, podName)
 			continue
 		}
-		responseConn.WriteJSON(subscribedEvent)
+		activeConn.Conn.WriteJSON(subscribedEvent)
 		log.Infof("websocket_handler: event %s sent to receiver_id %s", subscribedEvent.EventType, subscribedEvent.UserId)
 	}
 }

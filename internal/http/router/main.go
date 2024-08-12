@@ -4,8 +4,6 @@ import (
 	"context"
 	"os"
 
-	"github.com/PicPay/ms-chatpicpay-websocket-handler-api/pkg/cache"
-
 	"github.com/PicPay/lib-go-instrumentation/interfaces"
 	"github.com/PicPay/ms-chatpicpay-websocket-handler-api/internal/clients/sessionClient"
 	"github.com/PicPay/ms-chatpicpay-websocket-handler-api/internal/http/websocket"
@@ -16,13 +14,11 @@ import (
 )
 
 type HandlersDependencies struct {
-	PublishService                            services.PublishServicer
-	SubscribeService                          services.SubscribeServicer
-	WsConnectionService                       services.WsConnectionServicer
-	SessionClienter                           sessionClient.SessionClienter
-	Instrument                                interfaces.Instrument
-	Cache                                     cache.Cache
-	RedisCacheConnectionExpirationTimeMinutes int
+	PublishService      services.PublishServicer
+	SubscribeService    services.SubscribeServicer
+	WsConnectionService services.WsConnectionServicer
+	SessionClienter     sessionClient.SessionClienter
+	Instrument          interfaces.Instrument
 }
 
 func Handlers(ctx context.Context, dependencies *HandlersDependencies) *gin.Engine {
@@ -40,9 +36,8 @@ func Handlers(ctx context.Context, dependencies *HandlersDependencies) *gin.Engi
 		dependencies.SubscribeService,
 		dependencies.WsConnectionService,
 		dependencies.Instrument,
-		dependencies.Cache,
 		logger,
-		dependencies.RedisCacheConnectionExpirationTimeMinutes)
+	)
 
 	gi.GET("/health", func(c *gin.Context) {
 		c.JSON(200, gin.H{"status": "ok"})

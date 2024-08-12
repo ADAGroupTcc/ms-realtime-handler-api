@@ -31,6 +31,7 @@ type Environments struct {
 	SessionTokenMaxIdleConns                  int    `envconfig:"SESSION_TOKEN_MAX_IDLE_CONNS"`
 	SessionTokenMaxConnsPerHost               int    `envconfig:"SESSION_TOKEN_MAX_CONNS_PER_HOST"`
 	RedisCacheConnectionExpirationTimeMinutes int    `envconfig:"REDIS_CACHE_CONNECTION_EXPIRATION_TIME_MINUTES" default:"5"`
+	WsReadDeadlineAwaitSeconds                int    `envconfig:"WS_READ_DEADLINE_AWAIT_SECONDS" default:"10"`
 }
 
 // LoadEnvVars load the environment variables

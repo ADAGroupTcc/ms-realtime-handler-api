@@ -74,7 +74,7 @@ func main() {
 
 	subscribeEventChan := make(chan []byte, 100)
 
-	wsConnectionsService := services.NewWebsocketConnectionsService()
+	wsConnectionsService := services.NewWebsocketConnectionsService(time.Duration(envs.WsReadDeadlineAwaitSeconds)*time.Second, cache, log)
 	publishService := services.NewPublishEventService(broker, envs.KafkaPublisherTopic)
 	subscribeService := services.NewSubscribeEventService(broker, envs.RedisSubscribeTopic, subscribeEventChan, wsConnectionsService)
 
@@ -85,8 +85,6 @@ func main() {
 			WsConnectionService: wsConnectionsService,
 			SessionClienter:     sessionClient,
 			Instrument:          instrument,
-			Cache:               cache,
-			RedisCacheConnectionExpirationTimeMinutes: envs.RedisCacheConnectionExpirationTimeMinutes,
 		},
 	)
 
