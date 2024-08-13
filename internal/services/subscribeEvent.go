@@ -47,7 +47,12 @@ func (s *SubscribeEventService) HandleSubscriptionResponse(podName string, log *
 			log.Infof(util.ReceiverNotOnlineInPod, eventReceived.UserId, podName)
 			continue
 		}
-		activeConn.Conn.WriteJSON(eventReceived)
+		eventToPublish, err := domain.ParseEventToWsResponse(eventReceived)
+		if err != nil {
+			log.Error(util.UnableToParseWsEventResponse, err)
+			continue
+		}
+		activeConn.Conn.WriteJSON(eventToPublish)
 		log.Infof("websocket_handler: event %s sent to receiver_id %s", eventReceived.EventType, eventReceived.UserId)
 	}
 }
