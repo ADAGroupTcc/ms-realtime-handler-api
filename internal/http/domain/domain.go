@@ -50,11 +50,27 @@ type EventSubscribed struct {
 	Data      interface{} `json:"data"`
 }
 
+type WsEventResponse struct {
+	EventType string `json:"event_type"`
+	EventId   string `json:"event_id"`
+	Data      string `json:"data"`
+}
+
 func ParseEventToSendToReceiver(event []byte) (*EventSubscribed, error) {
 	eventSubscribedDomain := EventSubscribed{}
 	err := json.Unmarshal(event, &eventSubscribedDomain)
 	if err != nil {
 		return nil, err
 	}
+	return &eventSubscribedDomain, nil
+}
+
+func ParseEventToWsResponse(event *EventSubscribed) (*WsEventResponse, error) {
+	jsonData, err := json.Marshal(event.Data)
+	if err != nil {
+		return nil, err
+	}
+	eventSubscribedDomain := WsEventResponse{EventType: event.EventType, EventId: event.EventId, Data: string(jsonData)}
+
 	return &eventSubscribedDomain, nil
 }
