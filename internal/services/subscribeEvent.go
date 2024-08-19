@@ -53,6 +53,6 @@ func (s *SubscribeEventService) HandleSubscriptionResponse(podName string, log *
 			continue
 		}
 		activeConn.Conn.WriteJSON(eventToPublish)
-		log.Infof("websocket_handler: event %s sent to receiver_id %s", eventReceived.EventType, eventReceived.UserId)
+		log.Infof("websocket_handler: event %s sent to receiver_id %s", eventReceived.Event, eventReceived.UserId)
 	}
 }

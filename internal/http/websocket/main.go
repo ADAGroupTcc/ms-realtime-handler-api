@@ -126,7 +126,7 @@ func (h *websocketHandler) deleteConn(ctx context.Context, userId string, err er
 func sendEventError(conn *websocket.Conn, eventId string, eventName string, err error, code int) {
 	conn.WriteJSON(map[string]interface{}{
 		"event_id":   eventId,
-		"event_name": eventName,
+		"event_type": eventName,
 		"content": map[string]interface{}{
 			"error": err.Error(),
 			"code":  code,
