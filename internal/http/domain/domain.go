@@ -29,25 +29,25 @@ func (eventReceived *EventReceived) Validate() error {
 
 func (EventReceived *EventReceived) ToEventToPublish(userId string) *EventToPublish {
 	return &EventToPublish{
-		EventType: EventReceived.EventType,
-		EventId:   EventReceived.EventId,
-		UserId:    userId,
-		Data:      EventReceived.Data,
+		Event:   EventReceived.EventType,
+		EventId: EventReceived.EventId,
+		UserId:  userId,
+		Data:    EventReceived.Data,
 	}
 }
 
 type EventToPublish struct {
-	EventType string      `json:"event_type"`
-	EventId   string      `json:"event_id"`
-	UserId    string      `json:"user_id"`
-	Data      interface{} `json:"data"`
+	Event   string      `json:"event"`
+	EventId string      `json:"event_id"`
+	UserId  string      `json:"user_id"`
+	Data    interface{} `json:"data"`
 }
 
 type EventSubscribed struct {
-	EventType string      `json:"event_type"`
-	EventId   string      `json:"event_id"`
-	UserId    string      `json:"user_id"`
-	Data      interface{} `json:"data"`
+	Event   string      `json:"event"`
+	EventId string      `json:"event_id"`
+	UserId  string      `json:"user_id"`
+	Data    interface{} `json:"data"`
 }
 
 type WsEventResponse struct {
@@ -70,7 +70,7 @@ func ParseEventToWsResponse(event *EventSubscribed) (*WsEventResponse, error) {
 	if err != nil {
 		return nil, err
 	}
-	eventSubscribedDomain := WsEventResponse{EventType: event.EventType, EventId: event.EventId, Data: string(jsonData)}
+	eventSubscribedDomain := WsEventResponse{EventType: event.Event, EventId: event.EventId, Data: string(jsonData)}
 
 	return &eventSubscribedDomain, nil
 }
