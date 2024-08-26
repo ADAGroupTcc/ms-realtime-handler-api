@@ -52,7 +52,7 @@ func (s *SubscribeEventService) HandleSubscriptionResponse(podName string, log *
 			log.Error(util.UnableToParseWsEventResponse, err)
 			continue
 		}
-		activeConn.Conn.WriteJSON(eventToPublish)
-		log.Infof("websocket_handler: event %s sent to receiver_id %s", eventReceived.Event, eventReceived.UserId)
+		// activeConn.Conn.WriteJSON(eventToPublish)
+		log.Infof("websocket_handler: event %s sent to receiver_id %s", eventToPublish.EventType, eventReceived.UserId)
 	}
 }
