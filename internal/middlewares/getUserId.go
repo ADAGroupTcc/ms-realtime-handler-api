@@ -7,7 +7,7 @@ import (
 
 func GetUserIdFromHeader(log *logger.Logger) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		if c.Request.URL.Path == "/health" || c.Request.URL.Path == "/panic" {
+		if c.Request.URL.Path == "/health" {
 			c.Next()
 			return
 		}

@@ -44,10 +44,6 @@ func Handlers(ctx context.Context, dependencies *HandlersDependencies) *gin.Engi
 		c.JSON(200, gin.H{"status": "ok"})
 	})
 
-	gi.GET("/panic", func(c *gin.Context) {
-		panic("panic")
-	})
-
 	go dependencies.SubscribeService.SubscribeAsync(ctx, logger)
 	go dependencies.SubscribeService.HandleSubscriptionResponse(os.Getenv("HOSTNAME"), logger)
 	gi.GET("/ws", websocketHandler.WebsocketServer)
