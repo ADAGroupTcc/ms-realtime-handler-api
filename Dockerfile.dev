@@ -1,23 +1,41 @@
-FROM 289208114389.dkr.ecr.us-east-1.amazonaws.com/golang:1.21.5-alpine3.18 as build
+FROM golang:1.22.5-alpine3.20 AS build
+ARG GITHUB_TOKEN	
+ARG GITHUB_USER	ARG GITHUB_USER
 ARG GITHUB_TOKEN
-ARG GITHUB_USER
 
-WORKDIR /src
+RUN apk update && \
+    apk add --no-cache git
 
-COPY . .
+RUN mkdir -p /root/.ssh && \
+    echo "machine github.com login ${GITHUB_USER} password ${GITHUB_TOKEN}" > /root/.netrc
 
-RUN echo machine github.com login "$GITHUB_USER" password "$GITHUB_TOKEN" > ~/.netrc \
-    ; GOPRIVATE=github.com/PicPay go mod download \
-    ; CGO_ENABLED=0 go build -o bin/api cmd/api/main.go
 
-FROM 289208114389.dkr.ecr.us-east-1.amazonaws.com/alpine:3.18.2
+WORKDIR /src	WORKDIR /src
 
-RUN addgroup -S picpay && adduser -S picpay -G picpay
-WORKDIR /home/picpay/app
 
-COPY --from=build /src/bin/api .
+COPY go.mod go.sum ./
 
-USER picpay
-EXPOSE 8080
+RUN GOPRIVATE=github.com/PicPay go mod download
 
-ENTRYPOINT /home/picpay/app/api
+COPY . .	COPY . .
+
+
+RUN echo machine github.com login "$GITHUB_USER" password "$GITHUB_TOKEN" > ~/.netrc \	RUN CGO_ENABLED=0 go build -o bin/api cmd/api/main.go
+  ; GOPRIVATE=github.com/PicPay go mod download \	
+  ; CGO_ENABLED=0 go build -o bin/api cmd/api/main.go	FROM alpine:3.20
+
+
+FROM 289208114389.dkr.ecr.us-east-1.amazonaws.com/alpine:3.18.2	RUN apk update && \
+    apk add --no-cache git
+
+
+RUN addgroup -S picpay && adduser -S picpay -G picpay	RUN addgroup -S picpay && adduser -S picpay -G picpay
+WORKDIR /home/picpay/app	WORKDIR /home/picpay/app
+
+COPY --from=build /src/bin/api .	COPY --from=build /src/bin/api .
+
+USER picpay	USER picpay
+EXPOSE 8080	EXPOSE 8080
+
+
+ENTRYPOINT /home/picpay/app/api	ENTRYPOINT ["/home/picpay/app/api"]
