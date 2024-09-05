@@ -30,6 +30,7 @@ func Handlers(ctx context.Context, dependencies *HandlersDependencies) *gin.Engi
 
 	logger := logs.New(jsonFormatter)
 	gi.Use(middlewares.GetUserIdFromHeader(logger))
+	gi.Use(middlewares.RecoverMiddleware(ctx, dependencies.Instrument, logger))
 
 	websocketHandler := websocket.NewHandler(
 		dependencies.PublishService,
