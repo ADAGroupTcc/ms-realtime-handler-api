@@ -1,3 +1,0 @@
-## Contato
-
-<strong>chatpicpay</strong>
