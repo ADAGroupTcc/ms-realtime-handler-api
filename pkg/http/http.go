@@ -164,27 +164,21 @@ func (c *HttpClient) executeRetryableRequest(ctx context.Context, req *http.Requ
 		if retryableRequest.Method != http.MethodGet {
 			retryableRequest.Body, _ = req.GetBody()
 		}
-		start := time.Now()
 		response, err = c.client.Do(retryableRequest)
-		elapsed := time.Since(start)
 
 		if err != nil {
 			if os.IsTimeout(err) {
 				if shouldRetry(c.config.RetryWhenStatus, 408) {
 					retryTime := exponentialBackoff(i, c.config.RetryAfter)
-					c.config.Logger.Infof("Retrying url: %s after %.2f segundos. %d of %d times\n", retryableRequest.RequestURI, time.Duration(retryTime).Seconds(), i, c.config.Retries)
 					time.Sleep(retryTime)
 					continue
 				}
 			}
-			c.requestsHistogram(ctx, req.Method, clientConfig.MetricUrl, response.StatusCode, i, elapsed)
 			return nil, err
 		}
-		c.requestsHistogram(ctx, req.Method, clientConfig.MetricUrl, response.StatusCode, i, elapsed)
 
 		if shouldRetry(c.config.RetryWhenStatus, response.StatusCode) {
 			retryTime := exponentialBackoff(i, c.config.RetryAfter)
-			c.config.Logger.Infof("Retrying url: %s after %.2f segundos. %d of %d times\n", retryableRequest.RequestURI, time.Duration(retryTime).Seconds(), i, c.config.Retries)
 			time.Sleep(retryTime)
 			continue
 		}
@@ -193,16 +187,4 @@ func (c *HttpClient) executeRetryableRequest(ctx context.Context, req *http.Requ
 	}
 
 	return response, err
-}
-
-func (c *HttpClient) requestsHistogram(ctx context.Context, method string, metricUrl string, statusCode int, retryTimes int, duration time.Duration) {
-	labels := map[string]interface{}{
-		"method":      method,
-		"metric_url":  metricUrl,
-		"status_code": statusCode,
-		"retry_times": retryTimes,
-	}
-
-	histogram := c.config.Instrument.StartFloat64Histogram(ctx, "chatpicpay_http_request_histogram", "Custom HTTP request histogram metrics")
-	histogram.Add(ctx, duration.Seconds()*1000, labels)
 }

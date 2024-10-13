@@ -6,8 +6,7 @@ import (
 	"sync"
 	"time"
 
-	logger "github.com/PicPay/lib-go-logger/v2"
-	"github.com/PicPay/ms-chatpicpay-websocket-handler-api/pkg/cache"
+	"github.com/ADAGroupTcc/ms-realtime-handler-api/pkg/cache"
 	"github.com/gorilla/websocket"
 )
 
@@ -33,15 +32,13 @@ type websocketConnections struct {
 	actives          map[string]*ActiveConn
 	readDeadlineWait time.Duration
 	cache            cache.Cache
-	log              *logger.Logger
 }
 
-func NewWebsocketConnectionsService(readDeadlineWait time.Duration, cache cache.Cache, log *logger.Logger) *websocketConnections {
+func NewWebsocketConnectionsService(readDeadlineWait time.Duration, cache cache.Cache) *websocketConnections {
 	return &websocketConnections{
 		actives:          make(map[string]*ActiveConn),
 		readDeadlineWait: readDeadlineWait,
 		cache:            cache,
-		log:              log,
 	}
 }
 
@@ -99,7 +96,6 @@ func (wsConnection *websocketConnections) RefreshConnection(ctx context.Context,
 	conn.SetReadDeadline(time.Now().Add(wsConnection.readDeadlineWait))
 
 	conn.SetPongHandler(func(appData string) error {
-		wsConnection.log.Debugf("pong received from user: %s", userId)
 		wsConnection.cache.Set(ctx, userId, POD_NAME)
 		conn.SetReadDeadline(time.Now().Add(wsConnection.readDeadlineWait))
 		return nil
@@ -110,7 +106,6 @@ func (wsConnection *websocketConnections) RefreshConnection(ctx context.Context,
 	for {
 		select {
 		case <-ctx.Done():
-			wsConnection.log.Debugf("context canceled for user %s", userId)
 			return
 		case <-ticker.C:
 			mutex.Lock()
@@ -119,11 +114,9 @@ func (wsConnection *websocketConnections) RefreshConnection(ctx context.Context,
 
 			if err != nil {
 				wsConnection.DeleteConn(ctx, userId)
-				wsConnection.log.Errorf("could not send ping message to user %s. reason: %s", userId, err.Error())
 				ticker.Stop()
 				return
 			}
-			wsConnection.log.Debugf("ping sent to user %s", userId)
 		}
 	}
 }

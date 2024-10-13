@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 
-	"github.com/PicPay/ms-chatpicpay-websocket-handler-api/pkg/pubsubconnector"
+	"github.com/ADAGroupTcc/ms-realtime-handler-api/pkg/pubsubconnector"
 	redis "github.com/go-redis/redis/v8"
 )
 

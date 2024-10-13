@@ -5,7 +5,7 @@ package mocks
 import (
 	context "context"
 
-	http "github.com/PicPay/ms-chatpicpay-websocket-handler-api/pkg/http"
+	http "github.com/ADAGroupTcc/ms-realtime-handler-api/pkg/http"
 	mock "github.com/stretchr/testify/mock"
 )
 

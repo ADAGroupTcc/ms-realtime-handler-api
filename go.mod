@@ -1,4 +1,4 @@
-module github.com/PicPay/ms-chatpicpay-websocket-handler-api
+module github.com/ADAGroupTcc/ms-realtime-handler-api
 
 go 1.21
 

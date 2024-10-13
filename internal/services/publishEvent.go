@@ -2,14 +2,12 @@ package services
 
 import (
 	"context"
-	"github.com/PicPay/ms-chatpicpay-websocket-handler-api/util"
 
-	logger "github.com/PicPay/lib-go-logger/v2"
-	"github.com/PicPay/ms-chatpicpay-websocket-handler-api/pkg/pubsubconnector"
+	"github.com/ADAGroupTcc/ms-realtime-handler-api/pkg/pubsubconnector"
 )
 
 type PublishServicer interface {
-	PublishEvent(ctx context.Context, message interface{}, log *logger.Logger) error
+	PublishEvent(ctx context.Context, message interface{}) error
 }
 
 type PublishEventService struct {
@@ -24,11 +22,10 @@ func NewPublishEventService(broker *pubsubconnector.PubSubBroker, topicToPublish
 	}
 }
 
-func (p *PublishEventService) PublishEvent(ctx context.Context, message interface{}, log *logger.Logger) error {
+func (p *PublishEventService) PublishEvent(ctx context.Context, message interface{}) error {
 	if err := p.broker.Publisher.Publish(ctx, message, &map[string]interface{}{
 		"topic": p.topic,
 	}); err != nil {
-		log.Error(util.FailedToPublishMessageToPubSubBroker, err)
 		return err
 	}
 

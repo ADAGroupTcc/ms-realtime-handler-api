@@ -1,8 +1,6 @@
 package config
 
 import (
-	logger "github.com/PicPay/lib-go-logger/v2"
-	"github.com/PicPay/ms-chatpicpay-websocket-handler-api/util"
 	"github.com/joho/godotenv"
 	"github.com/kelseyhightower/envconfig"
 )
@@ -35,11 +33,10 @@ type Environments struct {
 }
 
 // LoadEnvVars load the environment variables
-func LoadEnvVars(log *logger.Logger) *Environments {
+func LoadEnvVars() *Environments {
 	godotenv.Load()
 	c := &Environments{}
 	if err := envconfig.Process("", c); err != nil {
-		log.Fatal(util.FailedToLoadEnvVars, err)
 		return nil
 	}
 	return c

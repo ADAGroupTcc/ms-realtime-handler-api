@@ -4,9 +4,6 @@ import (
 	"errors"
 	"math/rand"
 	"time"
-
-	"github.com/PicPay/lib-go-instrumentation/interfaces"
-	logger "github.com/PicPay/lib-go-logger/v2"
 )
 
 type RetryConfig struct {
@@ -27,15 +24,9 @@ type Config struct {
 	MaxIdleConns    int
 	MaxConnsPerHost int
 	RetryConfig
-	Logger     *logger.Logger
-	Instrument interfaces.Instrument
 }
 
 func (c *Config) validateConfig() error {
-	if c.Logger == nil {
-		return errors.New("http_config: logger must not be null")
-	}
-
 	if c.MaxConnsPerHost < 0 {
 		return errors.New("http_config: maxConnsPerHost could not be less than zero")
 	}

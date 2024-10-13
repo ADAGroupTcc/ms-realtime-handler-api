@@ -3,15 +3,13 @@ package services
 import (
 	"context"
 
-	logger "github.com/PicPay/lib-go-logger/v2"
-	"github.com/PicPay/ms-chatpicpay-websocket-handler-api/internal/http/domain"
-	"github.com/PicPay/ms-chatpicpay-websocket-handler-api/pkg/pubsubconnector"
-	"github.com/PicPay/ms-chatpicpay-websocket-handler-api/util"
+	"github.com/ADAGroupTcc/ms-realtime-handler-api/internal/http/domain"
+	"github.com/ADAGroupTcc/ms-realtime-handler-api/pkg/pubsubconnector"
 )
 
 type SubscribeServicer interface {
-	SubscribeAsync(ctx context.Context, log *logger.Logger) error
-	HandleSubscriptionResponse(podName string, log *logger.Logger)
+	SubscribeAsync(ctx context.Context) error
+	HandleSubscriptionResponse()
 }
 
 type SubscribeEventService struct {
@@ -30,29 +28,25 @@ func NewSubscribeEventService(broker *pubsubconnector.PubSubBroker, topicToSubsc
 	}
 }
 
-func (s *SubscribeEventService) SubscribeAsync(ctx context.Context, log *logger.Logger) error {
+func (s *SubscribeEventService) SubscribeAsync(ctx context.Context) error {
 	s.broker.Subscriber.SubscribeAsync(ctx, s.topic, s.subscribeChan)
 	return nil
 }
 
-func (s *SubscribeEventService) HandleSubscriptionResponse(podName string, log *logger.Logger) {
+func (s *SubscribeEventService) HandleSubscriptionResponse() {
 	for subscribedEvent := range s.subscribeChan {
 		eventReceived, err := domain.ParseEventToSendToReceiver(subscribedEvent)
 		if err != nil {
-			log.Error(util.UnableToParseEventResponse, err)
 			continue
 		}
 		activeConn := s.wsConnectionService.GetConn(eventReceived.UserId)
 		if activeConn == nil {
-			log.Infof(util.ReceiverNotOnlineInPod, eventReceived.UserId, podName)
 			continue
 		}
 		eventToPublish, err := domain.ParseEventToWsResponse(eventReceived)
 		if err != nil {
-			log.Error(util.UnableToParseWsEventResponse, err)
 			continue
 		}
-		// activeConn.Conn.WriteJSON(eventToPublish)
-		log.Infof("websocket_handler: event %s sent to receiver_id %s", eventToPublish.EventType, eventReceived.UserId)
+		activeConn.Conn.WriteJSON(eventToPublish)
 	}
 }
