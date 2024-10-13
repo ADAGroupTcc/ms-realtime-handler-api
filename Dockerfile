@@ -1,27 +1,22 @@
-FROM 289208114389.dkr.ecr.us-east-1.amazonaws.com/golang:1.22.5-alpine3.20 as build
-ARG GITHUB_TOKEN
-
+FROM golang:1.22.4-alpine3.19 AS build
 WORKDIR /src
-
-RUN apk add -U --no-cache gcc g++
 
 COPY . .
 
-RUN echo machine github.com login picpay-devex password "$GITHUB_TOKEN" > ~/.netrc \
-    && GOPRIVATE=github.com/PicPay go mod download \
-    && CGO_ENABLED=1 go build -tags musl -ldflags="-linkmode external -w" -o bin/api cmd/api/main.go
+RUN apk add -U --no-cache gcc g++ openssh
 
-FROM 289208114389.dkr.ecr.us-east-1.amazonaws.com/alpine:3.18.2
+RUN go mod download \
+    && CGO_ENABLED=0 go build -ldflags='-s -w -extldflags "-static"' -o bin/api cmd/api/main.go
 
-RUN addgroup -S picpay && adduser -S picpay -G picpay
-WORKDIR /home/picpay/app
+FROM alpine:3.18.2
+WORKDIR /home/adda-tcc/app
 
 COPY --from=build /src/docker-entrypoint.sh /src/bin/api ./
+COPY --from=build /src/mongodb.pem ./
 RUN chmod +x docker-entrypoint.sh
 
-USER picpay
 EXPOSE 8080
 
-HEALTHCHECK --interval=5s --timeout=3s CMD wget --no-verbose --tries=1 --spider http://localhost:8080/health || exit 1
-ENTRYPOINT ["/home/picpay/app/docker-entrypoint.sh"]
-CMD ["/home/picpay/app/api"]
+HEALTHCHECK --interval=5s --timeout=3s CMD wget --no-verbose --tries=3 --spider http://localhost:7000/health || exit 1
+ENTRYPOINT ["/home/adda-tcc/app/docker-entrypoint.sh"]
+CMD ["/home/adda-tcc/app/api"]

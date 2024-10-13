@@ -1,7 +1,0 @@
-global:
-  app_stage: prod
-
-picpay-ms:
-  apis: []
-  workers: []
-  cronjobs: []
