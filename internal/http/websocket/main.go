@@ -3,6 +3,7 @@ package websocket
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"github.com/ADAGroupTcc/ms-realtime-handler-api/internal/http/domain"
@@ -51,11 +52,10 @@ func (h *websocketHandler) WebsocketServer(c *gin.Context) {
 		return
 	}
 	defer func() {
-		// Envia uma mensagem de fechamento para o cliente
 		if err := conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, "Connection closed")); err != nil {
-			// Se falhar ao enviar a mensagem de fechamento, registrar o erro
+			fmt.Println(err.Error())
 		}
-		conn.Close() // Garante que a conexão WebSocket será fechada
+		conn.Close()
 	}()
 
 	ctx := c.Request.Context()
