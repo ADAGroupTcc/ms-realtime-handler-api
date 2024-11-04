@@ -3,20 +3,14 @@ package http
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
-	"os"
 	"time"
 
 	"github.com/google/uuid"
-)
-
-const (
-	defaultTimeout         = 2 * time.Second
-	defaultRetryAfter      = 1 * time.Second
-	defaultMaxIdleConns    = 100
-	defaultMaxConnsPerHost = 100
 )
 
 type HttpClienter interface {
@@ -35,7 +29,7 @@ type HttpResponse struct {
 }
 
 // HttpClient represents a custom HTTP client.
-type HttpClient struct {
+type httpClient struct {
 	client *http.Client
 	config *Config
 }
@@ -49,12 +43,13 @@ func New(config Config) (HttpClienter, error) {
 
 	config.normalizeConfig()
 
-	return &HttpClient{
+	return &httpClient{
 		client: &http.Client{
 			Timeout: config.Timeout,
 			Transport: &http.Transport{
 				MaxIdleConns:    config.MaxIdleConns,
 				MaxConnsPerHost: config.MaxConnsPerHost,
+				IdleConnTimeout: config.IdleConnTimeout,
 			},
 		},
 		config: &config,
@@ -62,31 +57,31 @@ func New(config Config) (HttpClienter, error) {
 }
 
 // Get performs an HTTP GET request.
-func (c *HttpClient) Get(ctx context.Context, clientConfig ClientConfig) (*HttpResponse, error) {
+func (c *httpClient) Get(ctx context.Context, clientConfig ClientConfig) (*HttpResponse, error) {
 	return c.execute(ctx, http.MethodGet, clientConfig, nil)
 }
 
 // Post performs an HTTP POST request.
-func (c *HttpClient) Post(ctx context.Context, clientConfig ClientConfig, payload []byte) (*HttpResponse, error) {
+func (c *httpClient) Post(ctx context.Context, clientConfig ClientConfig, payload []byte) (*HttpResponse, error) {
 	return c.execute(ctx, http.MethodPost, clientConfig, payload)
 }
 
 // Patch performs an HTTP PATCH request.
-func (c *HttpClient) Patch(ctx context.Context, clientConfig ClientConfig, payload []byte) (*HttpResponse, error) {
+func (c *httpClient) Patch(ctx context.Context, clientConfig ClientConfig, payload []byte) (*HttpResponse, error) {
 	return c.execute(ctx, http.MethodPatch, clientConfig, payload)
 }
 
 // Put performs an HTTP PUT request.
-func (c *HttpClient) Put(ctx context.Context, clientConfig ClientConfig, payload []byte) (*HttpResponse, error) {
+func (c *httpClient) Put(ctx context.Context, clientConfig ClientConfig, payload []byte) (*HttpResponse, error) {
 	return c.execute(ctx, http.MethodPut, clientConfig, payload)
 }
 
 // Delete performs an HTTP DELETE request.
-func (c *HttpClient) Delete(ctx context.Context, clientConfig ClientConfig) (*HttpResponse, error) {
+func (c *httpClient) Delete(ctx context.Context, clientConfig ClientConfig) (*HttpResponse, error) {
 	return c.execute(ctx, http.MethodDelete, clientConfig, nil)
 }
 
-func (c *HttpClient) execute(ctx context.Context, method string, clientConfig ClientConfig, payload []byte) (*HttpResponse, error) {
+func (c *httpClient) execute(ctx context.Context, method string, clientConfig ClientConfig, payload []byte) (*HttpResponse, error) {
 	url := c.formatUrl(clientConfig.Endpoint)
 
 	var body io.Reader
@@ -98,20 +93,25 @@ func (c *HttpClient) execute(ctx context.Context, method string, clientConfig Cl
 
 	req, err := http.NewRequestWithContext(ctx, method, url, body)
 	if err != nil {
-		return &HttpResponse{}, err
+		return nil, err
 	}
 
 	response, err := c.executeRequest(ctx, req, clientConfig)
 
 	if err != nil {
-		return &HttpResponse{}, err
+		return nil, err
+	}
+
+	if response.Body == nil {
+		err := fmt.Errorf("response body is nil")
+		return nil, err
 	}
 
 	defer response.Body.Close()
 
 	responseBody, err := io.ReadAll(response.Body)
 	if err != nil {
-		return &HttpResponse{}, err
+		return nil, err
 	}
 
 	headers := response.Header.Clone()
@@ -123,15 +123,15 @@ func (c *HttpClient) execute(ctx context.Context, method string, clientConfig Cl
 	}, nil
 }
 
-func (c *HttpClient) formatUrl(endpoint string) string {
+func (c *httpClient) formatUrl(endpoint string) string {
 	return fmt.Sprintf("%s%s", c.config.BaseURL, endpoint)
 }
 
-func (c *HttpClient) setHeaders(ctx context.Context, req *http.Request, customHeaders map[string]string) {
+func (c *httpClient) setHeaders(ctx context.Context, req *http.Request, customHeaders map[string]string) {
 	req.Header.Set("Content-Type", "application/json; charset=utf-8")
 	req.Header.Set("X-Request-Id", uuid.New().String())
 
-	if requestId, ok := ctx.Value("requestid").(string); ok {
+	if requestId, ok := ctx.Value("X-Request-Id").(string); ok {
 		req.Header.Set("X-Request-Id", requestId)
 	}
 
@@ -140,13 +140,9 @@ func (c *HttpClient) setHeaders(ctx context.Context, req *http.Request, customHe
 	}
 }
 
-func (c *HttpClient) executeRequest(ctx context.Context, req *http.Request, clientConfig ClientConfig) (res *http.Response, err error) {
-	var response *http.Response
-
+func (c *httpClient) executeRequest(ctx context.Context, req *http.Request, clientConfig ClientConfig) (res *http.Response, err error) {
 	c.setHeaders(ctx, req, clientConfig.Headers)
-	// req = c.config.Instrument.RequestWithTransactionContext(ctx, req)
-	response, err = c.executeRetryableRequest(ctx, req, clientConfig)
-
+	response, err := c.executeRetryableRequest(ctx, req)
 	if err != nil {
 		return nil, err
 	}
@@ -154,37 +150,78 @@ func (c *HttpClient) executeRequest(ctx context.Context, req *http.Request, clie
 	return response, nil
 }
 
-func (c *HttpClient) executeRetryableRequest(ctx context.Context, req *http.Request, clientConfig ClientConfig) (*http.Response, error) {
-	var response *http.Response
-	var err error
-
+func (c *httpClient) executeRetryableRequest(ctx context.Context, req *http.Request) (*http.Response, error) {
 	retryableRequest := req
 
-	for i := 1; i <= c.config.Retries; i++ {
-		if retryableRequest.Method != http.MethodGet {
+	var retryTime time.Duration
+	var err error
+	var response *http.Response
+	retriesAttempts := c.config.Retries
+	reason := ""
+
+	for attempts := 0; attempts <= retriesAttempts; attempts++ {
+		if req.Method == http.MethodPost || req.Method == http.MethodPut || req.Method == http.MethodPatch {
+			if req.Body != nil {
+				var getBodyErr error
+				retryableRequest.Body, getBodyErr = req.GetBody()
+				if getBodyErr != nil {
+					return nil, getBodyErr
+				}
+			}
+		}
+
+		if retryableRequest.Method != http.MethodGet && retryableRequest.Method != http.MethodDelete {
 			retryableRequest.Body, _ = req.GetBody()
 		}
+
+		if attempts > 0 {
+		}
+
 		response, err = c.client.Do(retryableRequest)
 
 		if err != nil {
-			if os.IsTimeout(err) {
-				if shouldRetry(c.config.RetryWhenStatus, 408) {
-					retryTime := exponentialBackoff(i, c.config.RetryAfter)
-					time.Sleep(retryTime)
+			reason = err.Error()
+			if isTimeout(err) {
+				if c.config.shouldRetry(http.StatusRequestTimeout) {
+					retryTime = c.defineRetryInterval(attempts)
+					if retriesAttempts > 0 {
+						time.Sleep(retryTime)
+					}
 					continue
 				}
 			}
 			return nil, err
 		}
 
-		if shouldRetry(c.config.RetryWhenStatus, response.StatusCode) {
-			retryTime := exponentialBackoff(i, c.config.RetryAfter)
-			time.Sleep(retryTime)
+		reason = fmt.Sprintf("status code %d", response.StatusCode)
+		if c.config.shouldRetry(response.StatusCode) {
+			retryTime = c.defineRetryInterval(attempts)
+			if retriesAttempts > 0 {
+				time.Sleep(retryTime)
+			}
 			continue
 		}
 
 		return response, nil
 	}
 
-	return response, err
+	if retriesAttempts == 0 {
+		return nil, errors.New("error on execute request: " + reason)
+	}
+
+	return nil, errors.New("retries attempts exhausted")
+}
+
+func isTimeout(err error) bool {
+	if netErr, ok := err.(net.Error); ok {
+		return netErr.Timeout()
+	}
+	return false
+}
+
+func (c *httpClient) defineRetryInterval(attempts int) time.Duration {
+	if c.config.ExponentialBackoffEnabled {
+		return exponentialBackoff(attempts, c.config.RetryAfter)
+	}
+	return c.config.RetryAfter
 }

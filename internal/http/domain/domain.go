@@ -3,21 +3,18 @@ package domain
 import (
 	"encoding/json"
 	"errors"
+	"time"
 )
 
 type EventReceived struct {
-	EventType string      `json:"event_type"`
+	EventType string      `json:"event"`
 	EventId   string      `json:"event_id"`
 	Data      interface{} `json:"data"`
 }
 
 func (eventReceived *EventReceived) Validate() error {
 	if eventReceived.EventType == "" {
-		return errors.New("event_type is required")
-	}
-
-	if eventReceived.EventId == "" {
-		return errors.New("event_id is required")
+		return errors.New("event is required")
 	}
 
 	if eventReceived.Data == nil {
@@ -51,7 +48,7 @@ type EventSubscribed struct {
 }
 
 type WsEventResponse struct {
-	EventType string `json:"event_type"`
+	EventType string `json:"event"`
 	EventId   string `json:"event_id"`
 	Data      string `json:"data"`
 }
@@ -73,4 +70,67 @@ func ParseEventToWsResponse(event *EventSubscribed) (*WsEventResponse, error) {
 	eventSubscribedDomain := WsEventResponse{EventType: event.Event, EventId: event.EventId, Data: string(jsonData)}
 
 	return &eventSubscribedDomain, nil
+}
+
+type MessageSent struct {
+	Event   string          `json:"event"`
+	EventId string          `json:"event_id"`
+	UserId  string          `json:"user_id"`
+	Data    MessageReceived `json:"data"`
+}
+
+func (m *MessageSent) ParseMessageSentToEventToPublish(messageCreated *MessageCreated) *EventToPublish {
+	return &EventToPublish{
+		Event:   m.Event,
+		EventId: m.EventId,
+		UserId:  m.UserId,
+		Data:    messageCreated,
+	}
+}
+
+func (m *MessageSent) ParseMessageSentToMessageRequest() MessageRequest {
+	return MessageRequest{
+		ChannelId: m.Data.Channel.ChannelId,
+		SenderId:  m.UserId,
+		Message:   m.Data.Message,
+		Data:      m.Data.Data,
+	}
+}
+
+type MessageReceived struct {
+	Channel *Channel `json:"channel"`
+	Message string   `json:"message"`
+	Data    string   `json:"data"`
+}
+
+type Channel struct {
+	ChannelId string   `json:"channel_id"`
+	Members   []string `json:"members"`
+}
+
+type MessageRequest struct {
+	ChannelId string `param:"channel_id"`
+	SenderId  string `json:"sender_id"`
+	Message   string `json:"message"`
+	Data      string `json:"data"`
+}
+
+type MessageCreated struct {
+	Id        string    `json:"id"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+	ChannelId string    `json:"channel_id"`
+	SenderId  string    `json:"sender_id"`
+	Message   string    `json:"message"`
+	Data      string    `json:"data"`
+	IsEdited  bool      `json:"is_edited"`
+}
+
+func (messageCreated *MessageCreated) ParseMessageCreatedToEventToPublish(receiverId string, eventId string) *EventToPublish {
+	return &EventToPublish{
+		Event:   "MESSAGE_RECEIVED",
+		EventId: eventId,
+		UserId:  receiverId,
+		Data:    messageCreated,
+	}
 }

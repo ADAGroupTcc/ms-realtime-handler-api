@@ -8,6 +8,7 @@ import (
 
 	"github.com/ADAGroupTcc/ms-realtime-handler-api/internal/http/domain"
 	"github.com/ADAGroupTcc/ms-realtime-handler-api/internal/services"
+	"github.com/ADAGroupTcc/ms-realtime-handler-api/internal/services/events"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
@@ -21,20 +22,17 @@ var (
 )
 
 type websocketHandler struct {
-	publishService      services.PublishServicer
-	subscribeService    services.SubscribeServicer
 	wsConnectionService services.WsConnectionServicer
+	services            map[string]events.Services
 }
 
 func NewHandler(
-	publishService services.PublishServicer,
-	subscribeService services.SubscribeServicer,
 	wsConnectionService services.WsConnectionServicer,
+	services map[string]events.Services,
 ) *websocketHandler {
 	return &websocketHandler{
-		publishService:      publishService,
-		subscribeService:    subscribeService,
 		wsConnectionService: wsConnectionService,
+		services:            services,
 	}
 }
 func (h *websocketHandler) WebsocketServer(c *gin.Context) {
@@ -94,12 +92,32 @@ func (h *websocketHandler) WebsocketServer(c *gin.Context) {
 			return
 		}
 
+		service, ok := h.services[eventReceived.EventType]
+		if !ok {
+			activeConn := h.wsConnectionService.GetConn(userId)
+			if activeConn != nil {
+				sendEventError(activeConn.Conn, eventReceived.EventId, eventReceived.EventType, fmt.Errorf("event type not found"), http.StatusNotFound)
+			}
+			return
+		}
+
 		eventToPublish := eventReceived.ToEventToPublish(userId)
-		err = h.publishService.PublishEvent(ctx, eventToPublish)
+		eventBytes, err := json.Marshal(eventToPublish)
 		if err != nil {
 			activeConn := h.wsConnectionService.GetConn(userId)
-			sendEventError(activeConn.Conn, eventReceived.EventId, eventReceived.EventType, err, http.StatusInternalServerError)
+			if activeConn != nil {
+				sendEventError(activeConn.Conn, eventReceived.EventId, eventReceived.EventType, err, http.StatusInternalServerError)
+			}
 			return
+		}
+
+		eventsToPublish := service.Handle(ctx, eventBytes)
+
+		for _, event := range eventsToPublish {
+			activeConn := h.wsConnectionService.GetConn(event.UserId)
+			if activeConn != nil {
+				activeConn.Conn.WriteJSON(event)
+			}
 		}
 	}
 }
