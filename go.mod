@@ -20,7 +20,6 @@ require (
 
 require (
 	cloud.google.com/go v0.75.0 // indirect
-	github.com/PicPay/lib-go-otel/v2 v2.4.0 // indirect
 	github.com/andybalholm/brotli v1.0.6 // indirect
 	github.com/bool64/shared v0.1.5 // indirect
 	github.com/bytedance/sonic v1.10.2 // indirect
