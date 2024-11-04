@@ -12,7 +12,6 @@ FROM alpine:3.18.2
 WORKDIR /home/adda-tcc/app
 
 COPY --from=build /src/docker-entrypoint.sh /src/bin/api ./
-COPY --from=build /src/mongodb.pem ./
 RUN chmod +x docker-entrypoint.sh
 
 EXPOSE 8080
