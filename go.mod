@@ -4,14 +4,10 @@ go 1.21
 
 //@todo atualizar a versão da lib de instrumentação. Copiar para o repo do template, fazer push e merge
 require (
-	github.com/PicPay/lib-go-logger/v2 v2.5.0
 	go.uber.org/automaxprocs v1.5.3
 )
 
 require (
-	github.com/PicPay/lib-go-api v0.3.0
-	github.com/PicPay/lib-go-instrumentation v0.12.0
-	github.com/PicPay/lib-go-pperr v1.3.0
 	github.com/confluentinc/confluent-kafka-go v1.9.2
 	github.com/gin-gonic/gin v1.9.1
 	github.com/go-redis/redis/v8 v8.11.5

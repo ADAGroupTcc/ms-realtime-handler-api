@@ -6,7 +6,7 @@ COPY . .
 RUN apk add -U --no-cache gcc g++ openssh
 
 RUN go mod download \
-    && CGO_ENABLED=0 go build -ldflags='-s -w -extldflags "-static"' -o bin/api cmd/api/main.go
+  && CGO_ENABLED=0 go build -ldflags='-s -w -extldflags "-static"' -o bin/api cmd/api/main.go
 
 FROM alpine:3.18.2
 WORKDIR /home/adda-tcc/app

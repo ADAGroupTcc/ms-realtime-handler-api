@@ -39,16 +39,6 @@ cloud.google.com/go/storage v1.14.0/go.mod h1:GrKmX003DSIwi9o29oFT7YDnHYwZoctc3f
 dmitri.shuralyov.com/gpu/mtl v0.0.0-20190408044501-666a987793e9/go.mod h1:H6x//7gZCb22OMCxBHrMx7a5I7Hp++hsVxbQ4BYO7hU=
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
 github.com/BurntSushi/xgb v0.0.0-20160522181843-27f122750802/go.mod h1:IVnqGOEym/WlBOVXweHU+Q+/VP0lqqI8lqeDx9IjBqo=
-github.com/PicPay/lib-go-api v0.3.0 h1:O+EORyDOyQd6a1P+G5Ex2hRZyTg8wwlzNXNstKYjgi4=
-github.com/PicPay/lib-go-api v0.3.0/go.mod h1:giEt+edwW92lOSEX4lzkpFHM8O56+oUqEXWVlhh4DPg=
-github.com/PicPay/lib-go-instrumentation v0.12.0 h1:ktP0lQiDdQHhR7SufCP+sLRB2oX1ICuTtltMwRgQIuA=
-github.com/PicPay/lib-go-instrumentation v0.12.0/go.mod h1:VF99N1E+QD8uYEhTDtgBzmcoy4Fwivx9OQfwRF9dHEI=
-github.com/PicPay/lib-go-logger/v2 v2.5.0 h1:LiriGRYVYSb/Izs13nOrKsfu3fBIUqeCkNRDacs10pc=
-github.com/PicPay/lib-go-logger/v2 v2.5.0/go.mod h1:NSw2p0WuzREShfwGpKBy7ZTRizlKJSzWL1DgfrIQ6VQ=
-github.com/PicPay/lib-go-otel/v2 v2.4.0 h1:39K9+UVuoLVX+piEr/hFRXS0bxQ3KzN5jb+ppcJJYhw=
-github.com/PicPay/lib-go-otel/v2 v2.4.0/go.mod h1:KPjVl2uvKDOAcP+DM8RMGJrHuFEV+N7SJPWKuhtnq7w=
-github.com/PicPay/lib-go-pperr v1.3.0 h1:a3NvW5WI8YX8oPLYP7Tol7J/oeIzu1DZPgy1vuCTaVQ=
-github.com/PicPay/lib-go-pperr v1.3.0/go.mod h1:yUQto7Uzd1pE81NsspL+WQAHBSF7J7/6Evh0PYeU73c=
 github.com/actgardner/gogen-avro/v10 v10.1.0/go.mod h1:o+ybmVjEa27AAr35FRqU98DJu1fXES56uXniYFv4yDA=
 github.com/actgardner/gogen-avro/v10 v10.2.1/go.mod h1:QUhjeHPchheYmMDni/Nx7VB0RsT/ee8YIgGY/xpEQgQ=
 github.com/actgardner/gogen-avro/v9 v9.1.0/go.mod h1:nyTj6wPqDJoxM3qdnjcLv+EnMDSDFqE0qDpva2QRmKc=
