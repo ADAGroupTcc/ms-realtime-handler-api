@@ -134,3 +134,56 @@ func (messageCreated *MessageCreated) ParseMessageCreatedToEventToPublish(receiv
 		Data:    messageCreated,
 	}
 }
+
+type SortResponse struct {
+	Users      []User   `json:"users"`
+	Categories []string `json:"categories"`
+}
+
+type User struct {
+	Id        string `json:"id"`
+	FirstName string `json:"first_name"`
+	LastName  string `json:"last_name"`
+	Nickname  string `json:"nickname"`
+}
+
+type SearchRequested struct {
+	Event  string `json:"event"`
+	UserId string `json:"user_id"`
+}
+
+type ChannelEvents struct {
+	Event string   `json:"event"`
+	Users []string `json:"users"`
+}
+
+const (
+	SEARCH_REQUESTED = "SEARCH_REQUESTED"
+	CHANNEL_ACCEPTED = "CHANNEL_ACCEPTED"
+	CHANNEL_REJECTED = "CHANNEL_REJECTED"
+	CHANNEL_FOUND    = "CHANNEL_FOUND"
+)
+
+/*
+// entrada
+{
+event: SEARCH_REQUESTED
+user_id: "123"
+}
+
+// saida
+{
+event: CHANNEL_FOUND,
+data: {
+	"users": len(4),
+	"categories": ["category1", "category2"]
+}
+}
+
+1..*
+{
+event: CHANNEL_ACCEPTED | CHANNEL_REJECTED
+user_id: "123"
+}
+
+*/

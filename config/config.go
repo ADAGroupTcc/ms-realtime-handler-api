@@ -16,6 +16,8 @@ type Environments struct {
 	WsReadDeadlineAwaitSeconds int    `envconfig:"WS_READ_DEADLINE_AWAIT_SECONDS" default:"10"`
 
 	MessagesApiUrl string `envconfig:"MESSAGES_API_URL"`
+
+	SorterApiUrl string `envconfig:"SORTER_API_URL"`
 }
 
 // LoadEnvVars load the environment variables
