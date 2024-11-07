@@ -11,6 +11,8 @@ import (
 
 	"github.com/ADAGroupTcc/ms-realtime-handler-api/config"
 	messagesClient "github.com/ADAGroupTcc/ms-realtime-handler-api/internal/http/clients/messages"
+	sorterApi "github.com/ADAGroupTcc/ms-realtime-handler-api/internal/http/clients/sorter"
+	"github.com/ADAGroupTcc/ms-realtime-handler-api/internal/http/domain"
 	"github.com/ADAGroupTcc/ms-realtime-handler-api/internal/http/router"
 	"github.com/ADAGroupTcc/ms-realtime-handler-api/internal/services"
 	"github.com/ADAGroupTcc/ms-realtime-handler-api/internal/services/events"
@@ -36,12 +38,25 @@ func main() {
 		os.Exit(1)
 	}
 
+	sorterHttpClient, err := http.New(http.Config{
+		BaseURL:           envs.SorterApiUrl,
+		AllowEmptyBaseUrl: false,
+	})
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
 	messagesApi := messagesClient.New(messagesHttpClient)
+	sorterApi := sorterApi.New(sorterHttpClient)
 
 	handlers := router.Handlers(ctx,
 		&router.HandlersDependencies{
 			WsConnectionService: wsConnectionsService,
 			MessageSent:         events.NewMessageSent(messagesApi),
+			SearchRequested:     events.NewSearchRequested(sorterApi),
+			ChannelAccepted:     events.NewChannelEvents(domain.CHANNEL_ACCEPTED),
+			ChannelRejected:     events.NewChannelEvents(domain.CHANNEL_REJECTED),
 		},
 	)
 	err = handlers.Run(":" + envs.APIPort)
