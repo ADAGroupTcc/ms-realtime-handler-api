@@ -41,6 +41,7 @@ func (s *SearchRequested) Handle(ctx context.Context, eventToParse []byte) []*do
 		event := domain.EventToPublish{
 			UserId: user.Id,
 			Event:  domain.CHANNEL_FOUND,
+			Data:   sortResponse,
 		}
 		events = append(events, &event)
 	}
