@@ -33,6 +33,8 @@ func (s *SearchRequested) Handle(ctx context.Context, eventToParse []byte) []*do
 		return events
 	}
 
+	fmt.Println(sortResponse)
+
 	users := sortResponse.Users
 
 	for _, user := range users {
@@ -42,6 +44,8 @@ func (s *SearchRequested) Handle(ctx context.Context, eventToParse []byte) []*do
 		}
 		events = append(events, &event)
 	}
+
+	fmt.Println(events)
 
 	return events
 }
