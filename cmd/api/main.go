@@ -31,6 +31,7 @@ func main() {
 
 	messagesHttpClient, err := http.New(http.Config{
 		BaseURL:           envs.MessagesApiUrl,
+		Timeout:           time.Second * 10,
 		AllowEmptyBaseUrl: false,
 	})
 	if err != nil {
@@ -40,6 +41,7 @@ func main() {
 
 	sorterHttpClient, err := http.New(http.Config{
 		BaseURL:           envs.SorterApiUrl,
+		Timeout:           time.Second * 10,
 		AllowEmptyBaseUrl: false,
 	})
 	if err != nil {
